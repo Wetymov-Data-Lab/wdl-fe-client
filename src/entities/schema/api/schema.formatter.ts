@@ -1,0 +1,255 @@
+import type {
+  CreateRelationshipDto,
+  CreateDatabaseDto,
+  UpdateDatabaseDto,
+  UpdateProjectDto,
+  CreateProjectDto,
+  CreateColumnDto,
+  RelationshipDto,
+  UpdateRealmDto,
+  UpdateTableDto,
+  CreateTableDto,
+  CreateRealmDto,
+  DatabaseDto,
+  ProjectDto,
+  ColumnDto,
+  RealmDto,
+  TableDto,
+} from "@/entities/schema/api/contracts";
+
+// TODO: zod shemas
+// TODO: это не адаптер, больше по смыслу маппер
+export const formatter = {
+  adapters: {
+    realm: {
+      fromServer: (dto: RealmDto): Schema.Realm => ({
+        id: dto.id,
+        name: dto.name,
+        slug: dto.slug,
+        status: dto.status,
+        visibility: dto.visibility,
+        settings: dto.settings,
+        notice: dto.notice,
+      }),
+      toServer: (value: Schema.CreateRealmInput | Schema.Realm, authorId: string): CreateRealmDto | UpdateRealmDto => {
+        if ("id" in value) {
+          return {
+            ...value,
+            updated_by: authorId,
+          };
+        }
+
+        return {
+          name: value.name,
+          slug: value.slug,
+          status: value.status ?? "active",
+          visibility: value.visibility ?? "private",
+          settings: value.settings ?? {},
+          notice: value.notice ?? null,
+          author_id: authorId,
+        };
+      },
+    },
+    project: {
+      fromServer: (dto: ProjectDto): Schema.Project => ({
+        id: dto.id,
+        realmId: dto.realm_id,
+        name: dto.name,
+        notice: dto.notice,
+      }),
+      toServer: (
+        value: Schema.CreateProjectInput | Schema.Project,
+        authorId: string,
+      ): CreateProjectDto | UpdateProjectDto => {
+        if ("id" in value) {
+          return { name: value.name, notice: value.notice };
+        }
+
+        return {
+          name: value.name,
+          realm_id: value.realmId,
+          notice: value.notice ?? null,
+          author_id: authorId,
+        };
+      },
+    },
+    database: {
+      fromServer: (dto: DatabaseDto): Schema.Database => ({
+        id: dto.id,
+        projectId: dto.project_id,
+        name: dto.name,
+        type: dto.type,
+        notice: dto.notice,
+        defaultSchema: dto.default_schema,
+        charset: dto.charset,
+        collation: dto.collation,
+      }),
+      toServer: (
+        value: Schema.CreateDatabaseInput | Schema.Database,
+        authorId: string,
+      ): CreateDatabaseDto | UpdateDatabaseDto => {
+        if ("id" in value) {
+          return {
+            name: value.name,
+            type: value.type,
+            notice: value.notice,
+            default_schema: value.defaultSchema,
+            charset: value.charset,
+            collation: value.collation,
+          };
+        }
+
+        return {
+          name: value.name,
+          project_id: value.projectId,
+          type: value.type ?? "psql",
+          notice: value.notice ?? null,
+          default_schema: value.defaultSchema ?? "public",
+          charset: value.charset ?? "UTF8",
+          collation: value.collation ?? null,
+          author_id: authorId,
+        };
+      },
+    },
+    table: {
+      fromServer: (dto: TableDto): Schema.DatabaseTable => ({
+        id: dto.id,
+        databaseId: dto.database_id,
+        name: dto.name,
+        schemaName: dto.schema_name,
+        description: dto.description,
+        notice: dto.notice,
+        color: dto.color,
+        position: dto.position,
+        width: dto.width,
+        isCollapsed: dto.is_collapsed,
+        sortOrder: dto.sort_order,
+      }),
+      toServer: (
+        value: Schema.CreateTableInput | Schema.DatabaseTable,
+        authorId: string,
+      ): CreateTableDto | UpdateTableDto => {
+        if ("id" in value) {
+          return {
+            name: value.name,
+            schema_name: value.schemaName,
+            description: value.description,
+            notice: value.notice,
+            color: value.color,
+            position: value.position,
+            width: value.width,
+            is_collapsed: value.isCollapsed,
+            sort_order: value.sortOrder,
+          };
+        }
+
+        return {
+          name: value.name,
+          database_id: value.databaseId,
+          schema_name: value.schemaName ?? "public",
+          description: value.description ?? null,
+          notice: value.notice ?? null,
+          color: value.color ?? null,
+          position: value.position ?? {
+            x: 100 + value.sortOrder * 40,
+            y: 100 + value.sortOrder * 40,
+          },
+          width: value.width ?? null,
+          is_collapsed: value.isCollapsed ?? false,
+          sort_order: value.sortOrder,
+          author_id: authorId,
+        };
+      },
+    },
+    column: {
+      fromServer: (dto: ColumnDto): Schema.TableColumn => ({
+        id: dto.id,
+        tableId: dto.table_id,
+        name: dto.name,
+        type: dto.type,
+        length: dto.length,
+        nullable: dto.nullable,
+        primaryKey: dto.primary_key,
+        unique: dto.unique,
+        sortOrder: dto.sort_order,
+      }),
+      toServer: (value: Schema.CreateColumnInput, authorId: string): CreateColumnDto => ({
+        name: value.name,
+        table_id: value.tableId,
+        type: value.type,
+        custom_type: value.customType ?? null,
+        length: value.length ?? null,
+        precision: value.precision ?? null,
+        scale: value.scale ?? null,
+        array_dimensions: value.arrayDimensions ?? 0,
+        nullable: value.nullable ?? true,
+        primary_key: value.primaryKey ?? false,
+        unique: value.unique ?? false,
+        auto_increment: value.autoIncrement ?? false,
+        unsigned: value.unsigned ?? false,
+        default: value.defaultValue ?? null,
+        check: value.check ?? null,
+        enum_values: value.enumValues ?? [],
+        sort_order: value.sortOrder,
+        notice: value.notice ?? null,
+        author_id: authorId,
+      }),
+    },
+    relationship: {
+      fromServer: (dto: RelationshipDto): Schema.Relationship => ({
+        id: dto.id,
+        databaseId: dto.database_id,
+        name: dto.name,
+        sourceTableId: dto.source_table_id,
+        targetTableId: dto.target_table_id,
+        columnPairs: dto.columns.map((column) => ({
+          sourceColumnId: column.source_column_id,
+          targetColumnId: column.target_column_id,
+        })),
+        sourceCardinality: dto.source_cardinality,
+        targetCardinality: dto.target_cardinality,
+        onDelete: dto.on_delete,
+        onUpdate: dto.on_update,
+        waypoints: dto.waypoints,
+      }),
+      toServer: (value: Schema.CreateRelationshipInput, authorId: string): CreateRelationshipDto => ({
+        database_id: value.databaseId,
+        name: value.name ?? null,
+        source_table_id: value.sourceTableId,
+        target_table_id: value.targetTableId,
+        columns: [
+          {
+            source_column_id: value.sourceColumnId,
+            target_column_id: value.targetColumnId,
+          },
+        ],
+        source_cardinality: value.sourceCardinality ?? "zero_or_many",
+        target_cardinality: value.targetCardinality ?? "exactly_one",
+        on_delete: value.onDelete ?? "no_action",
+        on_update: value.onUpdate ?? "no_action",
+        waypoints: value.waypoints ?? [],
+        author_id: authorId,
+      }),
+    },
+    workspace: {
+      fromServer: (realms: RealmDto[], projects: ProjectDto[], databases: DatabaseDto[]): Schema.Workspace => ({
+        realms: realms.map(formatter.adapters.realm.fromServer),
+        projects: projects.map(formatter.adapters.project.fromServer),
+        databases: databases.map(formatter.adapters.database.fromServer),
+      }),
+    },
+    diagram: {
+      fromServer: (
+        databaseId: Schema.Id,
+        tables: TableDto[],
+        columns: ColumnDto[],
+        relationships: RelationshipDto[],
+      ): Schema.Diagram => ({
+        databaseId,
+        tables: tables.map(formatter.adapters.table.fromServer),
+        columns: columns.map(formatter.adapters.column.fromServer),
+        relationships: relationships.map(formatter.adapters.relationship.fromServer),
+      }),
+    },
+  },
+};
