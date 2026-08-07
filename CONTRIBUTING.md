@@ -13,4 +13,5 @@ chmod +x .githooks/*
 ```text
 feat(api): add graph endpoint
 ```
+
 </details>
