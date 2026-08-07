@@ -1,0 +1,259 @@
+.realms-page {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 52px clamp(24px, 6vw, 96px);
+  background: #fbfbfd;
+}
+.realms-page--state {
+  display: grid;
+  place-items: center;
+  color: #777486;
+}
+.realms-page__header > div {
+  max-width: 620px;
+}
+.realms-page__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.realms-page__header > div > span,
+.realm-card__header span,
+.project-card__title > span {
+  color: #8174cf;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.realms-page h1 {
+  margin: 8px 0;
+  color: #312d42;
+  font-size: 32px;
+  letter-spacing: -0.04em;
+}
+.realms-page__header p,
+.realms-page__empty p {
+  margin: 0;
+  color: #777486;
+}
+.realm-list {
+  display: grid;
+  gap: 18px;
+  max-width: 1000px;
+  margin-top: 32px;
+}
+.realm-card {
+  overflow: hidden;
+  border: 1px solid #e5e2ed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 26px #342f4e0b;
+}
+.realm-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px;
+  border-bottom: 1px solid #eeecf3;
+  background: #faf9ff;
+}
+.entity-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.entity-actions button,
+.database-list__add {
+  border: 0;
+  border-radius: 6px;
+  padding: 5px 7px;
+  background: transparent;
+  color: #777187;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.entity-actions button:hover,
+.database-list__add:hover {
+  background: #f1eff8;
+  color: #5f4bd2;
+}
+.entity-actions .entity-actions__danger:hover {
+  background: #fff1f1;
+  color: #c75050;
+}
+.realm-card h2,
+.project-card h3 {
+  margin: 5px 0 0;
+  color: #393547;
+}
+.realm-card h2 {
+  font-size: 21px;
+}
+.realm-card code {
+  color: #898497;
+  font-size: 12px;
+}
+.realm-card__projects {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.project-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) 1fr;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid #eceaf1;
+  border-radius: 10px;
+}
+.project-card h3 {
+  font-size: 16px;
+}
+.project-card__title .entity-actions {
+  margin-top: 12px;
+}
+.database-list {
+  display: grid;
+  gap: 8px;
+}
+.database-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.database-row .database-link {
+  flex: 1;
+}
+.database-link {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e1f5;
+  border-radius: 8px;
+  color: #423d50;
+  text-decoration: none;
+}
+.database-link:hover {
+  border-color: #a89cf0;
+  background: #faf9ff;
+}
+.database-link span {
+  color: #7968dc;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.database-link strong {
+  font-size: 14px;
+}
+.database-link b {
+  color: #7664db;
+  font-size: 12px;
+}
+.database-list__empty,
+.realm-card__empty {
+  margin: 0;
+  color: #918d9c;
+  font-size: 13px;
+}
+.database-list__add {
+  justify-self: start;
+  margin-top: 3px;
+  color: #6651db;
+}
+.realms-page__empty {
+  max-width: 440px;
+  margin-top: 50px;
+  padding: 26px;
+  border: 1px dashed #d8d4e5;
+  border-radius: 12px;
+}
+.realms-page__empty h2 {
+  margin: 0 0 8px;
+  color: #484356;
+  font-size: 18px;
+}
+.workspace-dialog {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #211e354d;
+}
+.workspace-dialog__card {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 420px);
+  padding: 22px;
+  border: 1px solid #e2deed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px #1d192d3d;
+}
+.workspace-dialog__card header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+}
+.workspace-dialog__card header span {
+  color: #8174cf;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.workspace-dialog__card h2 {
+  margin: 5px 0 0;
+  color: #3b364b;
+  font-size: 20px;
+}
+.workspace-dialog__card header button {
+  border: 0;
+  background: transparent;
+  color: #827e8e;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.workspace-dialog__card label {
+  display: grid;
+  gap: 7px;
+  color: #625d6f;
+  font-size: 12px;
+  font-weight: 700;
+}
+.workspace-dialog__card input {
+  width: 100%;
+  border: 1px solid #dedbe8;
+  border-radius: 8px;
+  padding: 10px 11px;
+  color: #393547;
+  outline: none;
+}
+.workspace-dialog__card input:focus {
+  border-color: #7962e8;
+  box-shadow: 0 0 0 3px #7962e820;
+}
+.workspace-dialog__card footer {
+  display: flex;
+  justify-content: end;
+  gap: 8px;
+}
+.workspace-dialog__card--confirm p {
+  margin: 0;
+  color: #777282;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.button--danger {
+  border-color: #cf5757;
+  background: #cf5757;
+  color: #fff;
+}

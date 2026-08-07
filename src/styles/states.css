@@ -1,0 +1,136 @@
+.editor-state {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  place-items: center;
+  padding: 32px;
+  background: radial-gradient(circle at 50% 30%, #f0eeff, #fbfbfd 42%);
+  text-align: center;
+}
+.editor-state > div {
+  max-width: 480px;
+}
+.editor-state__eyebrow {
+  color: #7161d7;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.editor-state h1 {
+  margin: 10px 0;
+  color: #353144;
+  font-size: 26px;
+  letter-spacing: -0.03em;
+}
+.editor-state p {
+  margin: 0;
+  color: #7d798b;
+  line-height: 1.55;
+}
+.editor-state--error {
+  background: radial-gradient(circle at 50% 30%, #fff2ef, #fbfbfd 42%);
+}
+.editor-state--error .editor-state__eyebrow {
+  color: #c05d4d;
+}
+.creation-form {
+  display: grid;
+  gap: 9px;
+  margin: 22px auto 0;
+  text-align: left;
+}
+.creation-form input,
+.table-create-form input {
+  width: 100%;
+  border: 1px solid #dedce6;
+  border-radius: 7px;
+  padding: 10px 11px;
+  outline: none;
+}
+.creation-form input:focus,
+.table-create-form input:focus {
+  border-color: #6f59e8;
+  box-shadow: 0 0 0 3px #6f59e821;
+}
+.creation-form .button {
+  justify-self: center;
+  margin-top: 5px;
+}
+.form-error {
+  color: #bb4f42 !important;
+  font-size: 12px;
+}
+.table-create-form {
+  position: absolute;
+  z-index: 5;
+  top: 78px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 380px;
+  padding: 12px;
+  border: 1px solid #e0dee8;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 10px 28px #302b451c;
+}
+.table-create-form input {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .app-header {
+    gap: 8px;
+    padding: 0 14px;
+  }
+  .brand {
+    gap: 0;
+  }
+  .brand__copy,
+  .app-header__mode > span:last-child,
+  .nav-link__label {
+    display: none;
+  }
+  .nav-link {
+    justify-content: center;
+    padding: 10px;
+  }
+  .nav-link span {
+    font-size: 16px;
+  }
+  .workspace__topbar {
+    padding: 0 14px;
+  }
+  .workspace__actions .button--secondary,
+  .breadcrumb span:not(:last-of-type),
+  .breadcrumb b {
+    display: none;
+  }
+  .canvas-hint {
+    display: none;
+  }
+  .realms-page {
+    padding: 28px 18px;
+  }
+  .realms-page__header,
+  .realm-card__header,
+  .database-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .project-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #7057ed !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 3px #7057ed88);
+}
+
+.react-flow__edge.selected .react-flow__edge-text {
+  fill: #583fc9 !important;
+  font-weight: 800;
+}
