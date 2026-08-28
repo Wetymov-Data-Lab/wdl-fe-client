@@ -15,7 +15,6 @@ function urlValue(value: string | undefined, fallback: string): string {
   return (value ?? fallback).replace(/\/$/, "");
 }
 
-/** Public browser configuration. Never add credentials or private service keys here. */
 export const env = {
   app: {
     name: source.SERVICE_NAME ?? "wdl-fe-client",

@@ -7,6 +7,7 @@ export const database = {
     request<Array<Parameters<typeof formatter.adapters.database.fromServer>[0]>>("/databases/").then((dtos) =>
       dtos.map(formatter.adapters.database.fromServer),
     ),
+
   create: (input: Schema.CreateDatabaseInput) => {
     const dto = formatter.adapters.database.toServer(input, env.coreApi.developmentAuthorId);
     return request<Parameters<typeof formatter.adapters.database.fromServer>[0]>("/databases/", {
@@ -14,6 +15,7 @@ export const database = {
       body: JSON.stringify(dto),
     }).then(formatter.adapters.database.fromServer);
   },
+
   update: (value: Schema.Database, name: string) => {
     const dto = formatter.adapters.database.toServer({ ...value, name }, env.coreApi.developmentAuthorId);
     return request<Parameters<typeof formatter.adapters.database.fromServer>[0]>(`/databases/${value.id}`, {
@@ -21,5 +23,6 @@ export const database = {
       body: JSON.stringify(dto),
     }).then(formatter.adapters.database.fromServer);
   },
+
   delete: (databaseId: Schema.Id) => request<void>(`/databases/${databaseId}`, { method: "DELETE" }),
 };

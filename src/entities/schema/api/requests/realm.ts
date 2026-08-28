@@ -7,6 +7,7 @@ export const realm = {
     request<Array<Parameters<typeof formatter.adapters.realm.fromServer>[0]>>("/realms/").then((dtos) =>
       dtos.map(formatter.adapters.realm.fromServer),
     ),
+
   create: (input: Schema.CreateRealmInput) => {
     const dto = formatter.adapters.realm.toServer(input, env.coreApi.developmentAuthorId);
     return request<Parameters<typeof formatter.adapters.realm.fromServer>[0]>("/realms/", {
@@ -14,6 +15,7 @@ export const realm = {
       body: JSON.stringify(dto),
     }).then(formatter.adapters.realm.fromServer);
   },
+
   update: (value: Schema.Realm, input: Schema.CreateRealmInput) => {
     const dto = formatter.adapters.realm.toServer(
       { ...value, name: input.name, slug: input.slug },
@@ -24,6 +26,7 @@ export const realm = {
       body: JSON.stringify(dto),
     }).then(formatter.adapters.realm.fromServer);
   },
+
   delete: (realmId: Schema.Id) =>
     request<void>(`/realms/${realmId}?updated_by=${env.coreApi.developmentAuthorId}`, {
       method: "DELETE",

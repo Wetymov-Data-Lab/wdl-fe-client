@@ -7,6 +7,7 @@ export const table = {
     request<Array<Parameters<typeof formatter.adapters.table.fromServer>[0]>>(`/tables/?database_id=${databaseId}`).then(
       (dtos) => dtos.map(formatter.adapters.table.fromServer),
     ),
+
   create: (input: Schema.CreateTableInput) => {
     const dto = formatter.adapters.table.toServer(input, env.coreApi.developmentAuthorId);
     return request<Parameters<typeof formatter.adapters.table.fromServer>[0]>("/tables/", {
@@ -14,6 +15,7 @@ export const table = {
       body: JSON.stringify(dto),
     }).then(formatter.adapters.table.fromServer);
   },
+
   update: (value: Schema.DatabaseTable, position: Schema.Position) => {
     const dto = formatter.adapters.table.toServer({ ...value, position }, env.coreApi.developmentAuthorId);
     return request<Parameters<typeof formatter.adapters.table.fromServer>[0]>(`/tables/${value.id}`, {

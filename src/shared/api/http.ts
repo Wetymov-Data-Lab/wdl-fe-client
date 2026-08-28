@@ -10,6 +10,7 @@ export class ApiError extends Error {
   }
 }
 
+// TODO: посмотреть варианты ненативного fetch
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), env.coreApi.timeoutMs);

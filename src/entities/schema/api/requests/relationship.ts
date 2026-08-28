@@ -7,6 +7,7 @@ export const relationship = {
     request<Array<Parameters<typeof formatter.adapters.relationship.fromServer>[0]>>(
       `/relationships/?database_id=${databaseId}`,
     ).then((dtos) => dtos.map(formatter.adapters.relationship.fromServer)),
+
   create: (input: Schema.CreateRelationshipInput) => {
     const dto = formatter.adapters.relationship.toServer(input, env.coreApi.developmentAuthorId);
     return request<Parameters<typeof formatter.adapters.relationship.fromServer>[0]>("/relationships/", {
@@ -14,5 +15,6 @@ export const relationship = {
       body: JSON.stringify(dto),
     }).then(formatter.adapters.relationship.fromServer);
   },
+
   delete: (relationshipId: Schema.Id) => request<void>(`/relationships/${relationshipId}`, { method: "DELETE" }),
 };
