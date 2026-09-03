@@ -9,7 +9,7 @@ function Shell() {
     <div className="app-shell">
       <header className="app-header">
         <NavLink to="/editor" className="brand" aria-label="WDL - редактор схем">
-          <img className="brand__mark" src="/wetymov.png" alt="" />
+          <img className="brand__mark" src="/logo.svg" alt="" />
           <span className="brand__copy">
             <strong>WDL</strong>
             <small>Wetymov Data Labs</small>
