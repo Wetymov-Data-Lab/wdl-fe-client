@@ -30,9 +30,9 @@ export function toFlowEdges(diagram: Schema.Diagram, showLabels: boolean): Edge[
       targetHandle: `handle-left-${column.targetColumnId}`,
       type: "smoothstep",
       label: showLabels && index === 0 ? (relationship.name ?? undefined) : undefined,
-      labelStyle: { fill: "#7b7c93", fontSize: 11, fontWeight: 600 },
-      labelBgStyle: { fill: "#fff", fillOpacity: 0.92 },
-      style: { stroke: "#9c9aac", strokeWidth: 1.5 },
+      labelStyle: { fill: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 600 },
+      labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.92 },
+      style: { stroke: "var(--color-diagram-edge)", strokeWidth: 1.5 },
       data: { relationshipId: relationship.id },
     })),
   );

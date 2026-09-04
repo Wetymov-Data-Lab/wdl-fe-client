@@ -107,7 +107,9 @@ export function RealmsPage() {
     <main className="realms-page">
       <header className="realms-page__header">
         <div>
+          <span>WDL / WORKSPACES</span>
           <h1>Рабочие пространства</h1>
+          <p>Организуйте проекты и базы данных по изолированным контурам.</p>
         </div>
         <button
           className="button button--primary"
@@ -201,7 +203,7 @@ export function RealmsPage() {
                                 <Link className="database-link" to={`/editor?databaseId=${database.id}`}>
                                   <span>{database.type}</span>
                                   <strong>{database.name}</strong>
-                                  <b>Открыть</b>
+                                  <b>Открыть ↗</b>
                                 </Link>
                                 <div className="entity-actions">
                                   <button

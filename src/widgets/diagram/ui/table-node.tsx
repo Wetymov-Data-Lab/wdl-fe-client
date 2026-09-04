@@ -14,7 +14,7 @@ export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
   return (
     <article
       className={`table-node ${selected ? "table-node--selected" : ""}`}
-      style={{ "--table-color": table.color ?? "#6956e8" } as React.CSSProperties}
+      style={{ "--table-color": table.color ?? "var(--color-accent)" } as React.CSSProperties}
       onContextMenu={(event) => {
         event.preventDefault();
         data.onContextMenu?.(table, { x: event.clientX, y: event.clientY });

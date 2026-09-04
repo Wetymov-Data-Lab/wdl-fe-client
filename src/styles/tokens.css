@@ -1,0 +1,85 @@
+:root {
+  /* Typography: the application intentionally has only three text levels. */
+  --text-large: 2rem;
+  --text-medium: 1rem;
+  --text-small: 0.75rem;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  /* Core palette. Change these values to reskin the whole application. */
+  --color-ink: #211f29;
+  --color-muted: #77737c;
+  --color-quiet: #9b979e;
+  --color-line: #d9d7db;
+  --color-line-soft: #e9e7e8;
+  --color-control-line: #bbb8be;
+  --color-paper: #f3f2ef;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8f7f4;
+  --color-surface-accent: #fff7f2;
+  --color-accent: #c4512d;
+  --color-accent-strong: #8f3217;
+  --color-accent-soft: #f8ded1;
+  --color-danger: #a63e48;
+  --color-danger-strong: #8f3039;
+  --color-danger-line: #dfb8bb;
+  --color-danger-soft: #fbf1f1;
+  --color-success: #2d8b6e;
+  --color-success-strong: #27765f;
+  --color-success-line: #9fcebf;
+  --color-success-soft: #edf7f3;
+  --color-warning: #88601b;
+  --color-warning-line: #d8bd7e;
+  --color-warning-soft: #fff8e9;
+  --color-inverse: #f4f2f8;
+  --color-transparent: transparent;
+
+  /* Alpha colors and decorative surfaces live here as part of the palette. */
+  --color-header-surface: rgba(243, 242, 239, 0.96);
+  --color-header-surface-soft: rgba(243, 242, 239, 0.92);
+  --color-surface-strong-glass: rgba(255, 255, 255, 0.94);
+  --color-surface-glass: rgba(255, 255, 255, 0.9);
+  --color-surface-hover: rgba(255, 255, 255, 0.55);
+  --color-surface-tint: rgba(255, 255, 255, 0.35);
+  --color-overlay: rgba(33, 31, 41, 0.34);
+  --color-overlay-soft: rgba(33, 31, 41, 0.28);
+  --color-shadow-soft: rgba(33, 31, 41, 0.08);
+  --color-shadow: rgba(33, 31, 41, 0.12);
+  --color-shadow-strong: rgba(33, 31, 41, 0.18);
+  --color-grid-line: rgba(33, 31, 41, 0.035);
+  --color-shadow-offset: #deddd9;
+  --color-diagram-edge: #9c9aac;
+  --color-diagram-grid: #e2d7d0;
+
+  /* Shared visual primitives. */
+  --radius-control: 2px;
+  --radius-round: 999px;
+  --transition-fast: 120ms;
+  --transition-slow: 700ms;
+  --background-grid:
+    linear-gradient(var(--color-grid-line) 1px, var(--color-transparent) 1px),
+    linear-gradient(90deg, var(--color-grid-line) 1px, var(--color-transparent) 1px);
+  --shadow-small: 4px 4px 0 var(--color-shadow-offset);
+  --shadow-panel: 7px 7px 0 var(--color-shadow-offset);
+  --shadow-large: 10px 10px 0 var(--color-shadow-strong);
+
+  /* Short semantic aliases keep component styles compact. */
+  --ink: var(--color-ink);
+  --muted: var(--color-muted);
+  --quiet: var(--color-quiet);
+  --line: var(--color-line);
+  --line-soft: var(--color-line-soft);
+  --paper: var(--color-paper);
+  --surface: var(--color-surface);
+  --accent: var(--color-accent);
+  --accent-soft: var(--color-accent-soft);
+  --danger: var(--color-danger);
+  --success: var(--color-success);
+  --mono: var(--font-mono);
+
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+}

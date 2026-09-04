@@ -5,6 +5,7 @@ import type { Connection } from "@xyflow/react";
 import { column, database, project, realm, relationship, table } from "@/entities/schema/api";
 import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/model/relationship-rules";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
+import { readCssColorToken } from "@/shared/lib/css-token";
 import { DiagramEditor } from "@/widgets/diagram/ui/diagram-editor";
 
 async function loadWorkspace(): Promise<Schema.Workspace> {
@@ -375,7 +376,7 @@ export function EditorPage() {
                 className={`table-list__item ${selectedTableId === table.id ? "table-list__item--active" : ""}`}
                 type="button"
                 onClick={() => setSelectedTableId(table.id)}>
-                <i style={{ background: table.color ?? "#6956e8" }} />
+                <i style={{ background: table.color ?? "var(--color-accent)" }} />
                 <span>{table.name}</span>
                 <small>{diagramQuery.data.columns.filter((column) => column.tableId === table.id).length}</small>
               </button>
@@ -488,7 +489,7 @@ export function EditorPage() {
                 <input
                   type="color"
                   name="tableColor"
-                  defaultValue={editingTable.color ?? "#6956e8"}
+                  defaultValue={editingTable.color ?? readCssColorToken("--color-accent")}
                   aria-label="Цвет таблицы"
                 />
                 <small>Используйте цвет, чтобы обозначить назначение таблицы на схеме.</small>
