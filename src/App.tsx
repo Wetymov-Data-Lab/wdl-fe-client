@@ -1,44 +1,45 @@
-import { BrowserRouter, NavLink, Navigate, Route, Routes } from "react-router-dom";
+import type { PropsWithChildren } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppProviders } from "@/app/providers";
+import { useAuth } from "@/features/auth/model/use-auth";
+import { AccountPage } from "@/pages/account/account-page";
+import { AuthPage } from "@/pages/auth/auth-page";
 import { EditorPage } from "@/pages/editor/editor-page";
 import { RealmsPage } from "@/pages/realms/realms-page";
+import { AppHeader } from "@/widgets/app-header/ui/app-header";
 import "@/App.css";
+
+function ProtectedRoute({ children }: PropsWithChildren) {
+  const auth = useAuth();
+  const location = useLocation();
+  if (import.meta.env.AUTH_ENABLED !== "true") return children;
+  if (auth.state === "loading") {
+    return (
+      <main className="route-loading">
+        <span className="loading-ring" />
+        Проверяем сессию…
+      </main>
+    );
+  }
+  if (auth.state === "anonymous") {
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  }
+  return children;
+}
 
 function Shell() {
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <NavLink to="/editor" className="brand" aria-label="WDL - редактор схем">
-          <img className="brand__mark" src="/logo.svg" alt="" />
-          <span className="brand__copy">
-            <strong>WDL</strong>
-            <small>Wetymov Data Labs</small>
-          </span>
-        </NavLink>
-        <nav className="app-header__nav" aria-label="Основная навигация">
-          <NavLink to="/realms" className="nav-link">
-            <span className="nav-link__label">Пространства</span>
-          </NavLink>
-          <NavLink to="/editor" className="nav-link">
-            <span className="nav-link__label">Редактор схем</span>
-          </NavLink>
-        </nav>
-        <div className="app-header__mode">
-          <span className="avatar">D</span>
-          <span>
-            <b>Локальный режим</b>
-            <small>без авторизации</small>
-          </span>
-        </div>
-      </header>
-      <main className="app-content">
+      <AppHeader />
+      <div className="app-content">
         <Routes>
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/realms" element={<RealmsPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/projects" element={<Navigate to="/realms" replace />} />
           <Route path="*" element={<Navigate to="/editor" replace />} />
         </Routes>
-      </main>
+      </div>
     </div>
   );
 }
@@ -47,7 +48,18 @@ export default function App() {
   return (
     <AppProviders>
       <BrowserRouter>
-        <Shell />
+        <Routes>
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Shell />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </BrowserRouter>
     </AppProviders>
   );

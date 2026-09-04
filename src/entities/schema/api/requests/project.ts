@@ -1,6 +1,5 @@
 import { formatter } from "@/entities/schema/api/schema.formatter";
 import { request } from "@/shared/api/http";
-import { env } from "@/shared/config/env";
 
 export const project = {
   list: () =>
@@ -9,7 +8,7 @@ export const project = {
     ),
 
   create: (input: Schema.CreateProjectInput) => {
-    const dto = formatter.adapters.project.toServer(input, env.coreApi.developmentAuthorId);
+    const dto = formatter.adapters.project.toServer(input, import.meta.env.DEVELOPMENT_AUTHOR_ID);
     return request<Parameters<typeof formatter.adapters.project.fromServer>[0]>("/projects/", {
       method: "POST",
       body: JSON.stringify(dto),
@@ -17,7 +16,7 @@ export const project = {
   },
 
   update: (value: Schema.Project, name: string) => {
-    const dto = formatter.adapters.project.toServer({ ...value, name }, env.coreApi.developmentAuthorId);
+    const dto = formatter.adapters.project.toServer({ ...value, name }, import.meta.env.DEVELOPMENT_AUTHOR_ID);
     return request<Parameters<typeof formatter.adapters.project.fromServer>[0]>(`/projects/${value.id}`, {
       method: "PUT",
       body: JSON.stringify(dto),

@@ -1,4 +1,8 @@
-import { env } from "@/shared/config/env";
+import { getAccessToken } from "@/shared/auth/token-storage";
+
+const coreApiUrl = import.meta.env.CORE_API_URL.replace(/\/$/, "");
+const requestTimeoutMs = Number(import.meta.env.CORE_API_TIMEOUT_MS);
+const isAuthEnabled = import.meta.env.AUTH_ENABLED === "true";
 
 export class ApiError extends Error {
   constructor(
@@ -13,10 +17,15 @@ export class ApiError extends Error {
 // TODO: посмотреть варианты ненативного fetch
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), env.coreApi.timeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
+  const accessToken = isAuthEnabled ? getAccessToken() : null;
 
-  const response = await fetch(`${env.coreApi.url}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
+  const response = await fetch(`${coreApiUrl}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...init?.headers,
+    },
     ...init,
     signal: init?.signal ?? controller.signal,
   }).finally(() => clearTimeout(timeoutId));

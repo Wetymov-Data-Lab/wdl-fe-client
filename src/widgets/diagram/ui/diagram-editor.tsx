@@ -14,7 +14,6 @@ import {
   type NodeTypes,
   type Edge,
 } from "@xyflow/react";
-import { env } from "@/shared/config/env";
 import "@xyflow/react/dist/style.css";
 import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/model/relationship-rules";
 
@@ -41,7 +40,10 @@ export function DiagramEditor({
     () => toFlowNodes(diagram, onTableContextMenu, onColumnContextMenu),
     [diagram, onTableContextMenu, onColumnContextMenu],
   );
-  const initialEdges = useMemo(() => toFlowEdges(diagram, env.diagram.showRelationshipLabels), [diagram]);
+  const initialEdges = useMemo(
+    () => toFlowEdges(diagram, import.meta.env.DIAGRAM_SHOW_RELATIONSHIP_LABELS === "true"),
+    [diagram],
+  );
   const [nodes, setNodes, onNodesChange] = useNodesState<TableFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const pendingConnections = useRef<Connection[]>([]);
@@ -148,14 +150,14 @@ export function DiagramEditor({
         onPaneClick={onCanvasClick}
         fitView
         fitViewOptions={{ padding: 0.24 }}
-        minZoom={env.diagram.minZoom}
-        maxZoom={env.diagram.maxZoom}
-        snapToGrid={env.diagram.snapToGrid}
-        snapGrid={[env.diagram.gridSize, env.diagram.gridSize]}
+        minZoom={Number(import.meta.env.DIAGRAM_MIN_ZOOM)}
+        maxZoom={Number(import.meta.env.DIAGRAM_MAX_ZOOM)}
+        snapToGrid={import.meta.env.DIAGRAM_SNAP_TO_GRID === "true"}
+        snapGrid={[Number(import.meta.env.DIAGRAM_GRID_SIZE), Number(import.meta.env.DIAGRAM_GRID_SIZE)]}
         defaultEdgeOptions={{ type: "smoothstep" }}
-        connectionLineStyle={{ stroke: "#6f59e8", strokeWidth: 2 }}
+        connectionLineStyle={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}>
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#dad9e6" />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--color-diagram-grid)" />
         <Controls showInteractive={false} position="bottom-left" />
       </ReactFlow>
     </section>

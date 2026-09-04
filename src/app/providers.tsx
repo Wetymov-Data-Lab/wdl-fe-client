@@ -1,11 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { env } from "@/shared/config/env";
+import { AuthProvider } from "@/features/auth/model/auth-provider";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: env.coreApi.retryCount, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: Number(import.meta.env.CORE_API_RETRY_COUNT),
+      refetchOnWindowFocus: false,
+    },
+  },
 });
 
 export function AppProviders({ children }: PropsWithChildren) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 }
