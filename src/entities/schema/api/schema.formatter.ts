@@ -1,28 +1,11 @@
-import type {
-  CreateRelationshipDto,
-  CreateDatabaseDto,
-  UpdateDatabaseDto,
-  UpdateProjectDto,
-  CreateProjectDto,
-  CreateColumnDto,
-  RelationshipDto,
-  UpdateRealmDto,
-  UpdateTableDto,
-  CreateTableDto,
-  CreateRealmDto,
-  DatabaseDto,
-  ProjectDto,
-  ColumnDto,
-  RealmDto,
-  TableDto,
-} from "@/entities/schema/api/contracts";
+import type { CoreApi } from "@/shared/api/contracts";
 
 // TODO: zod shemas
 // TODO: это не адаптер, больше по смыслу маппер
 export const formatter = {
   adapters: {
     realm: {
-      fromServer: (dto: RealmDto): Schema.Realm => ({
+      fromServer: (dto: CoreApi.Realm): Schema.Realm => ({
         id: dto.id,
         name: dto.name,
         slug: dto.slug,
@@ -31,7 +14,10 @@ export const formatter = {
         settings: dto.settings,
         notice: dto.notice,
       }),
-      toServer: (value: Schema.CreateRealmInput | Schema.Realm, authorId: string): CreateRealmDto | UpdateRealmDto => {
+      toServer: (
+        value: Schema.CreateRealmInput | Schema.Realm,
+        authorId: string,
+      ): CoreApi.CreateRealm | CoreApi.UpdateRealm => {
         if ("id" in value) {
           return {
             ...value,
@@ -51,7 +37,7 @@ export const formatter = {
       },
     },
     project: {
-      fromServer: (dto: ProjectDto): Schema.Project => ({
+      fromServer: (dto: CoreApi.Project): Schema.Project => ({
         id: dto.id,
         realmId: dto.realm_id,
         name: dto.name,
@@ -60,7 +46,7 @@ export const formatter = {
       toServer: (
         value: Schema.CreateProjectInput | Schema.Project,
         authorId: string,
-      ): CreateProjectDto | UpdateProjectDto => {
+      ): CoreApi.CreateProject | CoreApi.UpdateProject => {
         if ("id" in value) {
           return { name: value.name, notice: value.notice };
         }
@@ -74,7 +60,7 @@ export const formatter = {
       },
     },
     database: {
-      fromServer: (dto: DatabaseDto): Schema.Database => ({
+      fromServer: (dto: CoreApi.Database): Schema.Database => ({
         id: dto.id,
         projectId: dto.project_id,
         name: dto.name,
@@ -87,7 +73,7 @@ export const formatter = {
       toServer: (
         value: Schema.CreateDatabaseInput | Schema.Database,
         authorId: string,
-      ): CreateDatabaseDto | UpdateDatabaseDto => {
+      ): CoreApi.CreateDatabase | CoreApi.UpdateDatabase => {
         if ("id" in value) {
           return {
             name: value.name,
@@ -112,7 +98,7 @@ export const formatter = {
       },
     },
     table: {
-      fromServer: (dto: TableDto): Schema.DatabaseTable => ({
+      fromServer: (dto: CoreApi.Table): Schema.DatabaseTable => ({
         id: dto.id,
         databaseId: dto.database_id,
         name: dto.name,
@@ -128,7 +114,7 @@ export const formatter = {
       toServer: (
         value: Schema.CreateTableInput | Schema.DatabaseTable,
         authorId: string,
-      ): CreateTableDto | UpdateTableDto => {
+      ): CoreApi.CreateTable | CoreApi.UpdateTable => {
         if ("id" in value) {
           return {
             name: value.name,
@@ -162,7 +148,7 @@ export const formatter = {
       },
     },
     column: {
-      fromServer: (dto: ColumnDto): Schema.TableColumn => ({
+      fromServer: (dto: CoreApi.Column): Schema.TableColumn => ({
         id: dto.id,
         tableId: dto.table_id,
         name: dto.name,
@@ -173,7 +159,7 @@ export const formatter = {
         unique: dto.unique,
         sortOrder: dto.sort_order,
       }),
-      toServer: (value: Schema.CreateColumnInput, authorId: string): CreateColumnDto => ({
+      toServer: (value: Schema.CreateColumnInput, authorId: string): CoreApi.CreateColumn => ({
         name: value.name,
         table_id: value.tableId,
         type: value.type,
@@ -196,7 +182,7 @@ export const formatter = {
       }),
     },
     relationship: {
-      fromServer: (dto: RelationshipDto): Schema.Relationship => ({
+      fromServer: (dto: CoreApi.Relationship): Schema.Relationship => ({
         id: dto.id,
         databaseId: dto.database_id,
         name: dto.name,
@@ -212,7 +198,7 @@ export const formatter = {
         onUpdate: dto.on_update,
         waypoints: dto.waypoints,
       }),
-      toServer: (value: Schema.CreateRelationshipInput, authorId: string): CreateRelationshipDto => ({
+      toServer: (value: Schema.CreateRelationshipInput, authorId: string): CoreApi.CreateRelationship => ({
         database_id: value.databaseId,
         name: value.name ?? null,
         source_table_id: value.sourceTableId,
@@ -232,7 +218,11 @@ export const formatter = {
       }),
     },
     workspace: {
-      fromServer: (realms: RealmDto[], projects: ProjectDto[], databases: DatabaseDto[]): Schema.Workspace => ({
+      fromServer: (
+        realms: CoreApi.Realm[],
+        projects: CoreApi.Project[],
+        databases: CoreApi.Database[],
+      ): Schema.Workspace => ({
         realms: realms.map(formatter.adapters.realm.fromServer),
         projects: projects.map(formatter.adapters.project.fromServer),
         databases: databases.map(formatter.adapters.database.fromServer),
@@ -241,9 +231,9 @@ export const formatter = {
     diagram: {
       fromServer: (
         databaseId: Schema.Id,
-        tables: TableDto[],
-        columns: ColumnDto[],
-        relationships: RelationshipDto[],
+        tables: CoreApi.Table[],
+        columns: CoreApi.Column[],
+        relationships: CoreApi.Relationship[],
       ): Schema.Diagram => ({
         databaseId,
         tables: tables.map(formatter.adapters.table.fromServer),
