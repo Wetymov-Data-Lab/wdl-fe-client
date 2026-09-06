@@ -89,6 +89,21 @@
   fill: var(--color-accent-strong) !important;
   font-weight: 800;
 }
+.diagram-flow-edge.react-flow__edge.selected .react-flow__edge-path {
+  stroke-dasharray: 7 7;
+  stroke-linecap: round;
+  animation: diagram-data-flow 0.85s linear infinite;
+}
+@keyframes diagram-data-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .diagram-flow-edge.react-flow__edge.selected .react-flow__edge-path {
+    animation: none;
+  }
+}
 
 .schema-explorer {
   z-index: 3;

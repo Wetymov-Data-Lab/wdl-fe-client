@@ -1,6 +1,10 @@
-import { toFlowEdges, toFlowNodes } from "@/widgets/diagram/model/diagram-elements";
+import {
+  getShortestHandleSides,
+  toFlowEdges,
+  toFlowNodes,
+} from "@/widgets/diagram/model/diagram-elements";
 import { TableNode, type TableFlowNode } from "@/widgets/diagram/ui/table-node";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   BackgroundVariant,
   ConnectionMode,
@@ -46,47 +50,44 @@ export function DiagramEditor({
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<TableFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const pendingConnections = useRef<Connection[]>([]);
 
   useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
   useEffect(() => {
-    setEdges((currentEdges) => {
-      const unmatchedConnections = [...pendingConnections.current];
-      const nextEdges = initialEdges.map((edge) => {
-        const currentEdge = currentEdges.find((item) => item.id === edge.id);
-        if (currentEdge?.sourceHandle && currentEdge.targetHandle) {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
+
+  const updateRelationshipSides = useCallback(
+    (movedNode: TableFlowNode) => {
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      nodesById.set(movedNode.id, movedNode);
+
+      setEdges((currentEdges) =>
+        currentEdges.map((edge) => {
+          if (edge.source !== movedNode.id && edge.target !== movedNode.id) return edge;
+
+          const sourceNode = nodesById.get(edge.source);
+          const targetNode = nodesById.get(edge.target);
+          if (!sourceNode || !targetNode || !edge.sourceHandle || !edge.targetHandle) return edge;
+
+          const sides = getShortestHandleSides(
+            { position: sourceNode.position, width: sourceNode.data.table.width },
+            { position: targetNode.position, width: targetNode.data.table.width },
+          );
+          const sourceColumnId = getColumnIdFromHandle(edge.sourceHandle);
+          const targetColumnId = getColumnIdFromHandle(edge.targetHandle);
+
           return {
             ...edge,
-            sourceHandle: currentEdge.sourceHandle,
-            targetHandle: currentEdge.targetHandle,
+            sourceHandle: `handle-${sides.source}-${sourceColumnId}`,
+            targetHandle: `handle-${sides.target}-${targetColumnId}`,
           };
-        }
-
-        const connectionIndex = unmatchedConnections.findIndex(
-          (connection) =>
-            connection.source === edge.source &&
-            connection.target === edge.target &&
-            connection.sourceHandle &&
-            connection.targetHandle &&
-            getColumnIdFromHandle(connection.sourceHandle) === getColumnIdFromHandle(edge.sourceHandle ?? "") &&
-            getColumnIdFromHandle(connection.targetHandle) === getColumnIdFromHandle(edge.targetHandle ?? ""),
-        );
-        if (connectionIndex === -1) return edge;
-
-        const [connection] = unmatchedConnections.splice(connectionIndex, 1);
-        return {
-          ...edge,
-          sourceHandle: connection.sourceHandle,
-          targetHandle: connection.targetHandle,
-        };
-      });
-
-      pendingConnections.current = unmatchedConnections;
-      return nextEdges;
-    });
-  }, [initialEdges, setEdges]);
+        }),
+      );
+    },
+    [nodes, setEdges],
+  );
 
   const onNodeDragStop = useCallback<OnNodeDrag<TableFlowNode>>(
     (_, node) => {
@@ -127,7 +128,6 @@ export function DiagramEditor({
   );
   const onConnect = useCallback(
     (connection: Connection) => {
-      pendingConnections.current.push(connection);
       onRelationshipCreate?.(connection);
     },
     [onRelationshipCreate],
@@ -144,6 +144,7 @@ export function DiagramEditor({
         onEdgesDelete={onEdgesDelete}
         deleteKeyCode={["Backspace", "Delete"]}
         onNodeDragStop={onNodeDragStop}
+        onNodeDrag={(_, node) => updateRelationshipSides(node)}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
         connectionMode={ConnectionMode.Loose}
