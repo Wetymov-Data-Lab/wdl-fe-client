@@ -36,7 +36,7 @@ export default defineConfig({
     tags: [
       {
         tag: "link",
-        attrs: { rel: "icon", type: "image/png", href: "/wetymov.png?v=3" },
+        attrs: { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
         append: true,
       },
     ],
