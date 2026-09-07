@@ -1,5 +1,6 @@
 import { formatter } from "@/entities/schema/api/schema.formatter";
 import { request } from "@/shared/api/http";
+import { getCurrentAccountId } from "@/shared/auth/token-storage";
 
 export const relationship = {
   listByDatabase: (databaseId: Schema.Id) =>
@@ -8,7 +9,7 @@ export const relationship = {
     ).then((dtos) => dtos.map(formatter.adapters.relationship.fromServer)),
 
   create: (input: Schema.CreateRelationshipInput) => {
-    const dto = formatter.adapters.relationship.toServer(input, import.meta.env.DEVELOPMENT_AUTHOR_ID);
+    const dto = formatter.adapters.relationship.toServer(input, getCurrentAccountId());
     return request<Parameters<typeof formatter.adapters.relationship.fromServer>[0]>("/relationships/", {
       method: "POST",
       body: JSON.stringify(dto),

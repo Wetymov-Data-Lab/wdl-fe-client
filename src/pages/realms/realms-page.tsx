@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { database, project, realm } from "@/entities/schema/api";
+import { database, loadWorkspace, project, realm } from "@/entities/schema/api";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
+import { useAuth } from "@/features/auth/model/use-auth";
 
 type FormState =
-  | { entity: "realm"; mode: "create"; name: string; slug: string }
-  | { entity: "realm"; mode: "edit"; value: Schema.Realm; name: string; slug: string }
+  | { entity: "realm"; mode: "create"; name: string; slug: string; visibility: string }
+  | { entity: "realm"; mode: "edit"; value: Schema.Realm; name: string; slug: string; visibility: string }
   | { entity: "project"; mode: "create"; realmId: Schema.Id; name: string }
   | { entity: "project"; mode: "edit"; value: Schema.Project; name: string }
   | { entity: "database"; mode: "create"; projectId: Schema.Id; name: string }
@@ -20,12 +21,22 @@ const formTitle = {
   database: { create: "Новая база данных", edit: "Редактировать базу данных" },
 } as const;
 
-async function loadWorkspace(): Promise<Schema.Workspace> {
-  const [realms, projects, databases] = await Promise.all([realm.list(), project.list(), database.list()]);
-  return { realms, projects, databases };
+const visibilityLabel: Record<string, string> = {
+  private: "Приватный",
+  internal: "Внутренний",
+  public: "Опубликован",
+};
+
+function shortId(value: string): string {
+  return `${value.slice(0, 8)}…${value.slice(-4)}`;
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" }).format(new Date(value));
 }
 
 export function RealmsPage() {
+  const auth = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
@@ -36,8 +47,8 @@ export function RealmsPage() {
     mutationFn: async (input: FormState) => {
       if (input.entity === "realm") {
         return input.mode === "create"
-          ? realm.create({ name: input.name, slug: input.slug })
-          : realm.update(input.value, { name: input.name, slug: input.slug });
+          ? realm.create({ name: input.name, slug: input.slug, visibility: input.visibility })
+          : realm.update(input.value, { name: input.name, slug: input.slug, visibility: input.visibility });
       }
       if (input.entity === "project") {
         return input.mode === "create"
@@ -85,9 +96,10 @@ export function RealmsPage() {
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name")).trim();
     const slug = String(data.get("slug") ?? "").trim();
+    const visibility = String(data.get("visibility") ?? "private");
 
     if (form.entity === "realm") {
-      saveMutation.mutate({ ...form, name, slug });
+      saveMutation.mutate({ ...form, name, slug, visibility });
       return;
     }
     saveMutation.mutate({ ...form, name });
@@ -114,7 +126,7 @@ export function RealmsPage() {
         <button
           className="button button--primary"
           type="button"
-          onClick={() => setForm({ entity: "realm", mode: "create", name: "", slug: "" })}>
+          onClick={() => setForm({ entity: "realm", mode: "create", name: "", slug: "", visibility: "private" })}>
           Добавить пространство
         </button>
       </header>
@@ -123,6 +135,7 @@ export function RealmsPage() {
         <div className="realm-list">
           {workspace.realms.map((realm) => {
             const projects = workspace.projects.filter((project) => project.realmId === realm.id);
+            const isOwner = realm.authorId === auth.user?.sub;
 
             return (
               <section className="realm-card" key={realm.id}>
@@ -131,33 +144,45 @@ export function RealmsPage() {
                     <span>REALM</span>
                     <h2>{realm.name}</h2>
                     <code>{realm.slug}</code>
+                    <div className="realm-card__meta">
+                      <span className={`realm-visibility realm-visibility--${realm.visibility}`}>
+                        {visibilityLabel[realm.visibility] ?? realm.visibility}
+                      </span>
+                      <span title={realm.authorId}>Автор: {isOwner ? "вы" : shortId(realm.authorId)}</span>
+                      <span>Создан {formatDate(realm.createdAt)}</span>
+                    </div>
                   </div>
                   <div className="entity-actions">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm({
-                          entity: "realm",
-                          mode: "edit",
-                          value: realm,
-                          name: realm.name,
-                          slug: realm.slug,
-                        })
-                      }>
-                      Редактировать
-                    </button>
-                    <button
-                      className="entity-actions__danger"
-                      type="button"
-                      onClick={() => setDeleteTarget({ entity: "realm", id: realm.id, name: realm.name })}>
-                      Удалить
-                    </button>
-                    <button
-                      className="button button--secondary"
-                      type="button"
-                      onClick={() => setForm({ entity: "project", mode: "create", realmId: realm.id, name: "" })}>
-                      Добавить проект
-                    </button>
+                    {isOwner && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              entity: "realm",
+                              mode: "edit",
+                              value: realm,
+                              name: realm.name,
+                              slug: realm.slug,
+                              visibility: realm.visibility,
+                            })
+                          }>
+                          Редактировать
+                        </button>
+                        <button
+                          className="entity-actions__danger"
+                          type="button"
+                          onClick={() => setDeleteTarget({ entity: "realm", id: realm.id, name: realm.name })}>
+                          Удалить
+                        </button>
+                        <button
+                          className="button button--secondary"
+                          type="button"
+                          onClick={() => setForm({ entity: "project", mode: "create", realmId: realm.id, name: "" })}>
+                          Добавить проект
+                        </button>
+                      </>
+                    )}
                   </div>
                 </header>
                 <div className="realm-card__projects">
@@ -170,32 +195,37 @@ export function RealmsPage() {
                           <div className="project-card__title">
                             <span>ПРОЕКТ</span>
                             <h3>{project.name}</h3>
-                            <div className="entity-actions">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setForm({
-                                    entity: "project",
-                                    mode: "edit",
-                                    value: project,
-                                    name: project.name,
-                                  })
-                                }>
-                                Редактировать
-                              </button>
-                              <button
-                                className="entity-actions__danger"
-                                type="button"
-                                onClick={() =>
-                                  setDeleteTarget({
-                                    entity: "project",
-                                    id: project.id,
-                                    name: project.name,
-                                  })
-                                }>
-                                Удалить
-                              </button>
-                            </div>
+                            <small className="entity-author" title={project.authorId}>
+                              Автор: {project.authorId === auth.user?.sub ? "вы" : shortId(project.authorId)}
+                            </small>
+                            {isOwner && (
+                              <div className="entity-actions">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setForm({
+                                      entity: "project",
+                                      mode: "edit",
+                                      value: project,
+                                      name: project.name,
+                                    })
+                                  }>
+                                  Редактировать
+                                </button>
+                                <button
+                                  className="entity-actions__danger"
+                                  type="button"
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      entity: "project",
+                                      id: project.id,
+                                      name: project.name,
+                                    })
+                                  }>
+                                  Удалить
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <div className="database-list">
                             {databases.map((database) => (
@@ -203,52 +233,59 @@ export function RealmsPage() {
                                 <Link className="database-link" to={`/editor?databaseId=${database.id}`}>
                                   <span>{database.type}</span>
                                   <strong>{database.name}</strong>
+                                  <small title={database.authorId}>
+                                    {database.authorId === auth.user?.sub ? "вы" : shortId(database.authorId)}
+                                  </small>
                                   <b>Открыть ↗</b>
                                 </Link>
-                                <div className="entity-actions">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setForm({
-                                        entity: "database",
-                                        mode: "edit",
-                                        value: database,
-                                        name: database.name,
-                                      })
-                                    }>
-                                    Редактировать
-                                  </button>
-                                  <button
-                                    className="entity-actions__danger"
-                                    type="button"
-                                    onClick={() =>
-                                      setDeleteTarget({
-                                        entity: "database",
-                                        id: database.id,
-                                        name: database.name,
-                                      })
-                                    }>
-                                    Удалить
-                                  </button>
-                                </div>
+                                {isOwner && (
+                                  <div className="entity-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setForm({
+                                          entity: "database",
+                                          mode: "edit",
+                                          value: database,
+                                          name: database.name,
+                                        })
+                                      }>
+                                      Редактировать
+                                    </button>
+                                    <button
+                                      className="entity-actions__danger"
+                                      type="button"
+                                      onClick={() =>
+                                        setDeleteTarget({
+                                          entity: "database",
+                                          id: database.id,
+                                          name: database.name,
+                                        })
+                                      }>
+                                      Удалить
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                             {!databases.length && (
                               <p className="database-list__empty">В этом проекте пока нет баз данных.</p>
                             )}
-                            <button
-                              className="database-list__add"
-                              type="button"
-                              onClick={() =>
-                                setForm({
-                                  entity: "database",
-                                  mode: "create",
-                                  projectId: project.id,
-                                  name: "",
-                                })
-                              }>
-                              + База данных
-                            </button>
+                            {isOwner && (
+                              <button
+                                className="database-list__add"
+                                type="button"
+                                onClick={() =>
+                                  setForm({
+                                    entity: "database",
+                                    mode: "create",
+                                    projectId: project.id,
+                                    name: "",
+                                  })
+                                }>
+                                + База данных
+                              </button>
+                            )}
                           </div>
                         </article>
                       );
@@ -285,16 +322,26 @@ export function RealmsPage() {
               <input name="name" defaultValue={form.name} autoFocus required />
             </label>
             {form.entity === "realm" && (
-              <label>
-                Slug
-                <input
-                  name="slug"
-                  defaultValue={form.slug}
-                  placeholder="например, identity"
-                  pattern="[a-z0-9-]+"
-                  required
-                />
-              </label>
+              <>
+                <label>
+                  Slug
+                  <input
+                    name="slug"
+                    defaultValue={form.slug}
+                    placeholder="например, identity"
+                    pattern="[a-z0-9-]+"
+                    required
+                  />
+                </label>
+                <label>
+                  Видимость
+                  <select name="visibility" defaultValue={form.visibility}>
+                    <option value="private">Приватный — виден только вам</option>
+                    <option value="internal">Внутренний — пока виден только вам</option>
+                    <option value="public">Публичный — виден всем пользователям</option>
+                  </select>
+                </label>
+              </>
             )}
             {saveMutation.isError && <p className="form-error">{saveMutation.error.message}</p>}
             <footer>

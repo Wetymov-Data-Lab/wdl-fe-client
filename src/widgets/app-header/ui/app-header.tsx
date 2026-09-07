@@ -3,8 +3,10 @@ import { useAuth } from "@/features/auth/model/use-auth";
 import { ProductBrand } from "@/shared/ui/product-brand";
 
 const navigation = [
-  { index: "01", label: "Пространства", to: "/realms" },
-  { index: "02", label: "Редактор схем", to: "/editor" },
+  { index: "01", label: "Обзор", to: "/overview" },
+  { index: "02", label: "Пространства", to: "/realms" },
+  { index: "03", label: "Каталог", to: "/catalog" },
+  { index: "04", label: "Редактор", to: "/editor" },
 ] as const;
 
 export function AppHeader() {
@@ -14,7 +16,7 @@ export function AppHeader() {
   return (
     <header className="app-header">
       <div className="app-header__brand">
-        <ProductBrand to="/editor" />
+        <ProductBrand to="/overview" />
       </div>
       <nav className="app-header__nav" aria-label="Основная навигация">
         {navigation.map((item) => (

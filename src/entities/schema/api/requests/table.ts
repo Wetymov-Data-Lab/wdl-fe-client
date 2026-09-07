@@ -1,5 +1,6 @@
 import { formatter } from "@/entities/schema/api/schema.formatter";
 import { request } from "@/shared/api/http";
+import { getCurrentAccountId } from "@/shared/auth/token-storage";
 
 export const table = {
   listByDatabase: (databaseId: Schema.Id) =>
@@ -8,7 +9,7 @@ export const table = {
     ),
 
   create: (input: Schema.CreateTableInput) => {
-    const dto = formatter.adapters.table.toServer(input, import.meta.env.DEVELOPMENT_AUTHOR_ID);
+    const dto = formatter.adapters.table.toServer(input, getCurrentAccountId());
     return request<Parameters<typeof formatter.adapters.table.fromServer>[0]>("/tables/", {
       method: "POST",
       body: JSON.stringify(dto),
@@ -16,7 +17,7 @@ export const table = {
   },
 
   update: (value: Schema.DatabaseTable, position: Schema.Position) => {
-    const dto = formatter.adapters.table.toServer({ ...value, position }, import.meta.env.DEVELOPMENT_AUTHOR_ID);
+    const dto = formatter.adapters.table.toServer({ ...value, position }, getCurrentAccountId());
     return request<Parameters<typeof formatter.adapters.table.fromServer>[0]>(`/tables/${value.id}`, {
       method: "PUT",
       body: JSON.stringify(dto),

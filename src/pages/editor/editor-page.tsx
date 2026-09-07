@@ -1,31 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
-import type { Connection } from "@xyflow/react";
-import { column, database, project, realm, relationship, table } from "@/entities/schema/api";
+import { Link, useSearchParams } from "react-router-dom";
+import type { Connection, ResizeParams } from "@xyflow/react";
+import { column, database, group, loadWorkspace, project, realm, relationship, table } from "@/entities/schema/api";
 import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/model/relationship-rules";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
+import { useAuth } from "@/features/auth/model/use-auth";
 import { readCssColorToken } from "@/shared/lib/css-token";
 import { DiagramEditor } from "@/widgets/diagram/ui/diagram-editor";
-
-async function loadWorkspace(): Promise<Schema.Workspace> {
-  const [realms, projects, databases] = await Promise.all([realm.list(), project.list(), database.list()]);
-  return { realms, projects, databases };
-}
+import { WorkspacePathPicker } from "@/widgets/workspace-path/ui/workspace-path-picker";
 
 async function loadDiagram(databaseId: Schema.Id): Promise<Schema.Diagram> {
-  const tables = await table.listByDatabase(databaseId);
+  const [tables, groups] = await Promise.all([table.listByDatabase(databaseId), group.listByDatabase(databaseId)]);
   const [columnGroups, relationships] = await Promise.all([
     Promise.all(tables.map((tableItem) => column.listByTable(tableItem.id))),
     relationship.listByDatabase(databaseId),
   ]);
-  return { databaseId, tables, columns: columnGroups.flat(), relationships };
+  return { databaseId, tables, columns: columnGroups.flat(), relationships, groups };
 }
 
 export function EditorPage() {
+  const auth = useAuth();
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [isTableFormOpen, setTableFormOpen] = useState(false);
+  const [isGroupFormOpen, setGroupFormOpen] = useState(false);
   const [columnTable, setColumnTable] = useState<Schema.DatabaseTable | null>(null);
   const [editingTable, setEditingTable] = useState<Schema.DatabaseTable | null>(null);
   const [tableMenu, setTableMenu] = useState<{
@@ -41,9 +40,18 @@ export function EditorPage() {
   const [tableSearch, setTableSearch] = useState("");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [connectionWarning, setConnectionWarning] = useState<string | null>(null);
+  const [browserRealmId, setBrowserRealmId] = useState<Schema.Id | null>(null);
+  const [browserProjectId, setBrowserProjectId] = useState<Schema.Id | null>(null);
   const requestedDatabaseId = params.get("databaseId");
   const workspaceQuery = useQuery({ queryKey: schemaQueryKeys.workspace, queryFn: loadWorkspace });
-  const databaseId = requestedDatabaseId ?? workspaceQuery.data?.databases[0]?.id;
+  const visibleRealmIds = new Set(workspaceQuery.data?.realms.map((realm) => realm.id) ?? []);
+  const visibleProjectIds = new Set(
+    workspaceQuery.data?.projects.filter((project) => visibleRealmIds.has(project.realmId)).map((project) => project.id) ??
+      [],
+  );
+  const databaseId = workspaceQuery.data?.databases.find(
+    (database) => database.id === requestedDatabaseId && visibleProjectIds.has(database.projectId),
+  )?.id;
   const diagramQuery = useQuery({
     queryKey: schemaQueryKeys.diagram(databaseId),
     queryFn: () => loadDiagram(databaseId!),
@@ -168,15 +176,99 @@ export function EditorPage() {
           : diagram,
       ),
   });
+  const groupCreation = useMutation({
+    mutationFn: ({ name, color }: { name: string; color: string }) =>
+      group.create({
+        databaseId: databaseId!,
+        name,
+        position: { x: 80 + (diagramQuery.data?.groups.length ?? 0) * 40, y: 80 },
+        width: 520,
+        height: 340,
+        color,
+        isCollapsed: false,
+        tableIds: [],
+      }),
+    onSuccess: (createdGroup) => {
+      setGroupFormOpen(false);
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram ? { ...diagram, groups: [...diagram.groups, createdGroup] } : diagram,
+      );
+    },
+  });
+  const groupUpdate = useMutation({
+    mutationFn: ({ value, changes }: { value: Schema.DiagramGroup; changes: Partial<Schema.DiagramGroup> }) =>
+      group.update({ ...value, ...changes }),
+    onSuccess: (updatedGroup) =>
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram
+          ? {
+              ...diagram,
+              groups: diagram.groups.map((item) => (item.id === updatedGroup.id ? updatedGroup : item)),
+            }
+          : diagram,
+      ),
+  });
+  const groupDeletion = useMutation({
+    mutationFn: group.delete,
+    onSuccess: (_, deletedGroup) =>
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram ? { ...diagram, groups: diagram.groups.filter((item) => item.id !== deletedGroup.id) } : diagram,
+      ),
+  });
+  const mutateGroupUpdate = groupUpdate.mutate;
+  const mutateGroupDeletion = groupDeletion.mutate;
+  const moveGroup = useCallback(
+    (value: Schema.DiagramGroup, position: Schema.Position) => mutateGroupUpdate({ value, changes: { position } }),
+    [mutateGroupUpdate],
+  );
+  const resizeGroup = useCallback(
+    (value: Schema.DiagramGroup, bounds: ResizeParams) =>
+      mutateGroupUpdate({
+        value,
+        changes: {
+          position: { x: bounds.x, y: bounds.y },
+          width: bounds.width,
+          height: bounds.height,
+        },
+      }),
+    [mutateGroupUpdate],
+  );
+  const deleteGroup = useCallback((value: Schema.DiagramGroup) => mutateGroupDeletion(value), [mutateGroupDeletion]);
   const activeDatabase = workspaceQuery.data?.databases.find((database) => database.id === databaseId);
   const activeProject = workspaceQuery.data?.projects.find((project) => project.id === activeDatabase?.projectId);
   const activeRealm = workspaceQuery.data?.realms.find((realm) => realm.id === activeProject?.realmId);
+  const canEdit = activeRealm?.authorId === auth.user?.sub;
   const visibleTables =
     diagramQuery.data?.tables.filter((table) => table.name.toLowerCase().includes(tableSearch.trim().toLowerCase())) ?? [];
   const selectedTable = diagramQuery.data?.tables.find((table) => table.id === selectedTableId) ?? null;
   const selectedColumns = selectedTable
     ? (diagramQuery.data?.columns.filter((column) => column.tableId === selectedTable.id) ?? [])
     : [];
+
+  const selectRealm = (realmId: Schema.Id | null) => {
+    setBrowserRealmId(realmId);
+    setBrowserProjectId(null);
+    setParams({}, { replace: true });
+  };
+  const selectProject = (projectId: Schema.Id | null) => {
+    setBrowserProjectId(projectId);
+    setParams({}, { replace: true });
+  };
+  const selectDatabase = (selectedDatabaseId: Schema.Id | null) => {
+    if (selectedDatabaseId) setParams({ databaseId: selectedDatabaseId });
+    else setParams({}, { replace: true });
+  };
+  const pathPicker = workspaceQuery.data ? (
+    <WorkspacePathPicker
+      workspace={workspaceQuery.data}
+      realmId={activeRealm?.id ?? browserRealmId}
+      projectId={activeProject?.id ?? browserProjectId}
+      databaseId={databaseId ?? null}
+      onRealmChange={selectRealm}
+      onProjectChange={selectProject}
+      onDatabaseChange={selectDatabase}
+    />
+  ) : null;
 
   const submitWorkspace = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -245,6 +337,11 @@ export function EditorPage() {
       color: String(form.get("tableColor")),
     });
   };
+  const submitGroup = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    groupCreation.mutate({ name: String(form.get("groupName")), color: String(form.get("groupColor")) });
+  };
   useEffect(() => {
     const closeMenu = (event: KeyboardEvent) => {
       if (event.key === "Escape") setTableMenu(null);
@@ -273,6 +370,26 @@ export function EditorPage() {
           <p>
             Проверьте <code>CORE_API_URL</code> и доступность сервиса.
           </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!databaseId && workspaceQuery.data?.realms.length) {
+    return (
+      <main className="editor-state editor-state--picker">
+        <div>
+          <span className="editor-state__eyebrow">Навигация по схемам</span>
+          <h1>{requestedDatabaseId ? "Схема недоступна" : "Выберите базу данных"}</h1>
+          <p>
+            {requestedDatabaseId
+              ? "Эта база данных отсутствует среди доступных вам realms. Выберите другую схему."
+              : "Редактор загрузит диаграмму только после вашего явного выбора."}
+          </p>
+          {pathPicker}
+          <Link className="button button--secondary editor-state__manage-link" to="/realms">
+            Управление пространствами
+          </Link>
         </div>
       </main>
     );
@@ -331,32 +448,42 @@ export function EditorPage() {
         setColumnMenu(null);
       }}>
       <header className="workspace__topbar">
-        <div className="breadcrumb">
-          <span>{activeRealm?.name ?? "Realms"}</span>
-          <b>/</b>
-          <span>{activeProject?.name ?? "Проект"}</span>
-          <b>/</b>
-          <strong>{activeDatabase?.name ?? databaseId}</strong>
-        </div>
+        {pathPicker}
         <div className="workspace__actions">
           <button className="button button--secondary">Экспорт SQL</button>
-          <button className="button button--primary" onClick={() => setTableFormOpen(true)}>
-            + Таблица
-          </button>
+          {canEdit ? (
+            <>
+              <button className="button button--secondary" onClick={() => setGroupFormOpen(true)}>
+                + Область
+              </button>
+              <button className="button button--primary" onClick={() => setTableFormOpen(true)}>
+                + Таблица
+              </button>
+            </>
+          ) : (
+            <span className="demo-badge">ТОЛЬКО ЧТЕНИЕ</span>
+          )}
         </div>
       </header>
       <div className="workspace__body">
         <aside className="schema-explorer">
           <div className="schema-explorer__head">
             <span className="schema-explorer__label">СХЕМА</span>
-            <button className="icon-button" type="button" title="Добавить таблицу" onClick={() => setTableFormOpen(true)}>
-              +
-            </button>
+            {canEdit && (
+              <button className="icon-button" type="button" title="Добавить таблицу" onClick={() => setTableFormOpen(true)}>
+                +
+              </button>
+            )}
           </div>
           <div className="database-card">
             <span className="database-card__engine">{activeDatabase?.type ?? "database"}</span>
             <strong>{activeDatabase?.name ?? databaseId}</strong>
             <small>{diagramQuery.data.tables.length} таблиц</small>
+            {activeDatabase && (
+              <small title={activeDatabase.authorId}>
+                Автор: {activeDatabase.authorId === auth.user?.sub ? "вы" : `${activeDatabase.authorId.slice(0, 8)}…`}
+              </small>
+            )}
           </div>
           <label className="table-search">
             <input
@@ -402,11 +529,15 @@ export function EditorPage() {
         <section className="workspace__canvas">
           <DiagramEditor
             diagram={diagramQuery.data}
-            onTableMove={(tableId, position) => moveTable.mutate({ tableId, position })}
-            onTableContextMenu={openTableMenu}
-            onColumnContextMenu={openColumnMenu}
-            onRelationshipCreate={createRelationshipFromConnection}
-            onRelationshipDelete={(relationshipId) => relationshipDeletion.mutate(relationshipId)}
+            editable={canEdit}
+            onTableMove={canEdit ? (tableId, position) => moveTable.mutate({ tableId, position }) : undefined}
+            onTableContextMenu={canEdit ? openTableMenu : undefined}
+            onColumnContextMenu={canEdit ? openColumnMenu : undefined}
+            onRelationshipCreate={canEdit ? createRelationshipFromConnection : undefined}
+            onRelationshipDelete={canEdit ? (relationshipId) => relationshipDeletion.mutate(relationshipId) : undefined}
+            onGroupMove={canEdit ? moveGroup : undefined}
+            onGroupResize={canEdit ? resizeGroup : undefined}
+            onGroupDelete={canEdit ? deleteGroup : undefined}
             onCanvasClick={() => {
               setTableMenu(null);
               setColumnMenu(null);
@@ -425,6 +556,47 @@ export function EditorPage() {
           </button>
           {tableCreation.isError && <span className="form-error">{tableCreation.error.message}</span>}
         </form>
+      )}
+      {isGroupFormOpen && (
+        <div className="editor-overlay">
+          <form className="editor-drawer" onSubmit={submitGroup}>
+            <header>
+              <div>
+                <span>КАНВАС</span>
+                <strong>{activeDatabase?.name}</strong>
+              </div>
+              <button type="button" aria-label="Закрыть" onClick={() => setGroupFormOpen(false)}>
+                X
+              </button>
+            </header>
+            <h2>Новая цветовая область</h2>
+            <label>
+              Название области
+              <input name="groupName" placeholder="Например, Identity" autoFocus required />
+            </label>
+            <label className="table-color-control">
+              Цвет
+              <span>
+                <input
+                  type="color"
+                  name="groupColor"
+                  defaultValue={readCssColorToken("--color-accent")}
+                  aria-label="Цвет области"
+                />
+                <small>Область появится позади таблиц; её можно перемещать и менять по размеру.</small>
+              </span>
+            </label>
+            <footer>
+              <button className="button" type="button" onClick={() => setGroupFormOpen(false)}>
+                Отмена
+              </button>
+              <button className="button button--primary" disabled={groupCreation.isPending}>
+                {groupCreation.isPending ? "Создаем..." : "Создать область"}
+              </button>
+            </footer>
+            {groupCreation.isError && <p className="form-error">{groupCreation.error.message}</p>}
+          </form>
+        </div>
       )}
       {columnTable && (
         <div className="editor-overlay">
@@ -550,8 +722,13 @@ export function EditorPage() {
           Связь не создана: {connectionWarning ?? relationshipCreation.error?.message}
         </div>
       )}
+      {(groupUpdate.isError || groupDeletion.isError) && (
+        <div className="connection-warning">
+          Область не обновлена: {groupUpdate.error?.message ?? groupDeletion.error?.message}
+        </div>
+      )}
       <div className="canvas-hint">
-        Колесо: масштаб. Space + перетаскивание: панорама. Перетаскивайте таблицы, чтобы менять схему.
+        Колесо: масштаб. Space + перетаскивание: панорама. Выберите область, чтобы изменить её размер.
       </div>
     </main>
   );

@@ -90,6 +90,35 @@
   font-family: var(--mono);
   font-size: var(--text-small);
 }
+.realm-card__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 10px;
+  color: var(--quiet);
+  font-family: var(--mono);
+  font-size: var(--text-small);
+}
+.realm-card__meta > span {
+  display: inline-flex;
+  color: var(--quiet);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.realm-card__meta .realm-visibility {
+  display: inline-flex;
+  padding: 3px 7px;
+  border: 1px solid var(--color-control-line);
+  color: var(--color-muted);
+  background: var(--surface);
+  letter-spacing: 0;
+}
+.realm-card__meta .realm-visibility--public {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--accent);
+  background: var(--color-surface-accent);
+}
 .realm-card__projects {
   display: grid;
   gap: 0;
@@ -109,6 +138,13 @@
 }
 .project-card h3 {
   font-size: var(--text-medium);
+}
+.entity-author {
+  display: block;
+  margin-top: 7px;
+  color: var(--quiet);
+  font-family: var(--mono);
+  font-size: var(--text-small);
 }
 .project-card__title .entity-actions {
   margin-top: 15px;
@@ -163,7 +199,7 @@
 }
 .database-link {
   display: grid;
-  grid-template-columns: 54px 1fr auto;
+  grid-template-columns: 54px minmax(100px, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 54px;
@@ -173,6 +209,11 @@
   transition:
     color var(--transition-fast),
     background var(--transition-fast);
+}
+.database-link small {
+  color: var(--quiet);
+  font-family: var(--mono);
+  font-size: var(--text-small);
 }
 .database-link:hover {
   color: var(--accent);
@@ -275,7 +316,8 @@
   font-size: var(--text-small);
   font-weight: 680;
 }
-.workspace-dialog__card input {
+.workspace-dialog__card input,
+.workspace-dialog__card select {
   width: 100%;
   min-height: 50px;
   padding: 0 12px;
@@ -283,8 +325,10 @@
   border-radius: var(--radius-control);
   outline: none;
   color: var(--ink);
+  background: var(--surface);
 }
-.workspace-dialog__card input:focus {
+.workspace-dialog__card input:focus,
+.workspace-dialog__card select:focus {
   border-color: var(--accent);
   box-shadow: inset 3px 0 var(--accent);
 }

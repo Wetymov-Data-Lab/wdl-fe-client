@@ -4,6 +4,8 @@ import { AppProviders } from "@/app/providers";
 import { useAuth } from "@/features/auth/model/use-auth";
 import { AccountPage } from "@/pages/account/account-page";
 import { AuthPage } from "@/pages/auth/auth-page";
+import { CatalogPage } from "@/pages/catalog/catalog-page";
+import { DashboardPage } from "@/pages/dashboard/dashboard-page";
 import { EditorPage } from "@/pages/editor/editor-page";
 import { RealmsPage } from "@/pages/realms/realms-page";
 import { AppHeader } from "@/widgets/app-header/ui/app-header";
@@ -33,11 +35,13 @@ function Shell() {
       <AppHeader />
       <div className="app-content">
         <Routes>
+          <Route path="/overview" element={<DashboardPage />} />
+          <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/realms" element={<RealmsPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/projects" element={<Navigate to="/realms" replace />} />
-          <Route path="*" element={<Navigate to="/editor" replace />} />
+          <Route path="*" element={<Navigate to="/overview" replace />} />
         </Routes>
       </div>
     </div>

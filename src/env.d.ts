@@ -25,7 +25,6 @@ type PublicEnvironment = {
   CORE_API_URL: string;
   CORE_API_TIMEOUT_MS: `${number}`;
   CORE_API_RETRY_COUNT: `${number}`;
-  DEVELOPMENT_AUTHOR_ID: string;
 
   // ---------------------------------------------------------------------------
   // Identity service

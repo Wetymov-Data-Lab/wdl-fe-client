@@ -1,5 +1,6 @@
 import type { TableFlowNode } from "@/widgets/diagram/ui/table-node";
-import type { Edge } from "@xyflow/react";
+import type { GroupFlowNode } from "@/widgets/diagram/ui/group-node";
+import type { Edge, ResizeParams } from "@xyflow/react";
 
 const DEFAULT_TABLE_WIDTH = 290;
 
@@ -12,6 +13,8 @@ export type RelationshipHandleSides = {
   source: "left" | "right";
   target: "left" | "right";
 };
+
+export type DiagramFlowNode = TableFlowNode | GroupFlowNode;
 
 export function getShortestHandleSides(
   source: HorizontalTableBounds,
@@ -35,8 +38,18 @@ export function toFlowNodes(
   diagram: Schema.Diagram,
   onContextMenu?: (table: Schema.DatabaseTable, position: { x: number; y: number }) => void,
   onColumnContextMenu?: (column: Schema.TableColumn, position: { x: number; y: number }) => void,
-): TableFlowNode[] {
-  return diagram.tables.map((table) => ({
+  editable = true,
+  onGroupDelete?: (group: Schema.DiagramGroup) => void,
+  onGroupResize?: (group: Schema.DiagramGroup, bounds: ResizeParams) => void,
+): DiagramFlowNode[] {
+  const groups: GroupFlowNode[] = diagram.groups.map((group) => ({
+    id: group.id,
+    type: "diagramGroup",
+    position: group.position,
+    data: { group, editable, onDelete: onGroupDelete, onResize: onGroupResize },
+    style: { width: group.width, height: group.height, zIndex: 0 },
+  }));
+  const tables: TableFlowNode[] = diagram.tables.map((table) => ({
     id: table.id,
     type: "databaseTable",
     position: table.position,
@@ -46,8 +59,9 @@ export function toFlowNodes(
       onContextMenu,
       onColumnContextMenu,
     },
-    style: { width: table.width ?? 290 },
+    style: { width: table.width ?? 290, zIndex: 2 },
   }));
+  return [...groups, ...tables];
 }
 
 export function toFlowEdges(diagram: Schema.Diagram, showLabels: boolean): Edge[] {

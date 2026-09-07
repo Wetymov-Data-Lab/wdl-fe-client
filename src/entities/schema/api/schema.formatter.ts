@@ -13,15 +13,20 @@ export const formatter = {
         visibility: dto.visibility,
         settings: dto.settings,
         notice: dto.notice,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
+        updatedBy: dto.updated_by,
       }),
-      toServer: (
-        value: Schema.CreateRealmInput | Schema.Realm,
-        authorId: string,
-      ): CoreApi.CreateRealm | CoreApi.UpdateRealm => {
+      toServer: (value: Schema.CreateRealmInput | Schema.Realm): CoreApi.CreateRealm | CoreApi.UpdateRealm => {
         if ("id" in value) {
           return {
-            ...value,
-            updated_by: authorId,
+            name: value.name,
+            slug: value.slug,
+            status: value.status,
+            visibility: value.visibility,
+            settings: value.settings,
+            notice: value.notice,
           };
         }
 
@@ -32,7 +37,6 @@ export const formatter = {
           visibility: value.visibility ?? "private",
           settings: value.settings ?? {},
           notice: value.notice ?? null,
-          author_id: authorId,
         };
       },
     },
@@ -42,6 +46,9 @@ export const formatter = {
         realmId: dto.realm_id,
         name: dto.name,
         notice: dto.notice,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
       }),
       toServer: (
         value: Schema.CreateProjectInput | Schema.Project,
@@ -69,6 +76,9 @@ export const formatter = {
         defaultSchema: dto.default_schema,
         charset: dto.charset,
         collation: dto.collation,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
       }),
       toServer: (
         value: Schema.CreateDatabaseInput | Schema.Database,
@@ -110,6 +120,9 @@ export const formatter = {
         width: dto.width,
         isCollapsed: dto.is_collapsed,
         sortOrder: dto.sort_order,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
       }),
       toServer: (
         value: Schema.CreateTableInput | Schema.DatabaseTable,
@@ -158,6 +171,9 @@ export const formatter = {
         primaryKey: dto.primary_key,
         unique: dto.unique,
         sortOrder: dto.sort_order,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
       }),
       toServer: (value: Schema.CreateColumnInput, authorId: string): CoreApi.CreateColumn => ({
         name: value.name,
@@ -197,6 +213,9 @@ export const formatter = {
         onDelete: dto.on_delete,
         onUpdate: dto.on_update,
         waypoints: dto.waypoints,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
       }),
       toServer: (value: Schema.CreateRelationshipInput, authorId: string): CoreApi.CreateRelationship => ({
         database_id: value.databaseId,
@@ -215,6 +234,30 @@ export const formatter = {
         on_update: value.onUpdate ?? "no_action",
         waypoints: value.waypoints ?? [],
         author_id: authorId,
+      }),
+    },
+    group: {
+      fromServer: (dto: CoreApi.DiagramGroup): Schema.DiagramGroup => ({
+        id: dto.id,
+        databaseId: dto.database_id,
+        name: dto.name,
+        position: dto.position,
+        width: dto.width,
+        height: dto.height,
+        color: dto.color,
+        isCollapsed: dto.is_collapsed,
+        tableIds: dto.table_ids,
+      }),
+      toServer: (value: Schema.DiagramGroup): CoreApi.DiagramGroup => ({
+        id: value.id,
+        database_id: value.databaseId,
+        name: value.name,
+        position: value.position,
+        width: value.width,
+        height: value.height,
+        color: value.color,
+        is_collapsed: value.isCollapsed,
+        table_ids: value.tableIds,
       }),
     },
     workspace: {
@@ -239,6 +282,7 @@ export const formatter = {
         tables: tables.map(formatter.adapters.table.fromServer),
         columns: columns.map(formatter.adapters.column.fromServer),
         relationships: relationships.map(formatter.adapters.relationship.fromServer),
+        groups: [],
       }),
     },
   },

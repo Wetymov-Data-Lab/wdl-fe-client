@@ -11,6 +11,10 @@ declare namespace Schema {
     visibility: string;
     settings: Record<string, unknown>;
     notice: string | null;
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
+    updatedBy: Id | null;
   };
 
   type Project = {
@@ -18,6 +22,9 @@ declare namespace Schema {
     realmId: Id;
     name: string;
     notice: string | null;
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
   };
 
   type Database = {
@@ -29,6 +36,9 @@ declare namespace Schema {
     defaultSchema: string | null;
     charset: string | null;
     collation: string | null;
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
   };
 
   type Workspace = {
@@ -127,6 +137,9 @@ declare namespace Schema {
     primaryKey: boolean;
     unique: boolean;
     sortOrder: number;
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
   };
 
   type DatabaseTable = {
@@ -141,6 +154,9 @@ declare namespace Schema {
     width: number | null;
     isCollapsed: boolean;
     sortOrder: number;
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
   };
 
   type RelationshipColumnPair = {
@@ -160,12 +176,30 @@ declare namespace Schema {
     onDelete: string;
     onUpdate: string;
     waypoints: Position[];
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
   };
+
+  type DiagramGroup = {
+    id: Id;
+    databaseId: Id;
+    name: string;
+    position: Position;
+    width: number;
+    height: number;
+    color: string | null;
+    isCollapsed: boolean;
+    tableIds: Id[];
+  };
+
+  type CreateDiagramGroupInput = Omit<DiagramGroup, "id">;
 
   type Diagram = {
     databaseId: Id;
     tables: DatabaseTable[];
     columns: TableColumn[];
     relationships: Relationship[];
+    groups: DiagramGroup[];
   };
 }

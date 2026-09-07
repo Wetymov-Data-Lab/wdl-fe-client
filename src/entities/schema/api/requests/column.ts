@@ -1,5 +1,6 @@
 import { formatter } from "@/entities/schema/api/schema.formatter";
 import { request } from "@/shared/api/http";
+import { getCurrentAccountId } from "@/shared/auth/token-storage";
 
 export const column = {
   listByTable: (tableId: Schema.Id) =>
@@ -8,7 +9,7 @@ export const column = {
     ),
 
   create: (input: Schema.CreateColumnInput) => {
-    const dto = formatter.adapters.column.toServer(input, import.meta.env.DEVELOPMENT_AUTHOR_ID);
+    const dto = formatter.adapters.column.toServer(input, getCurrentAccountId());
     return request<Parameters<typeof formatter.adapters.column.fromServer>[0]>("/columns/", {
       method: "POST",
       body: JSON.stringify(dto),

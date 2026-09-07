@@ -1,9 +1,11 @@
 import {
   getShortestHandleSides,
+  type DiagramFlowNode,
   toFlowEdges,
   toFlowNodes,
 } from "@/widgets/diagram/model/diagram-elements";
 import { TableNode, type TableFlowNode } from "@/widgets/diagram/ui/table-node";
+import { GroupNode } from "@/widgets/diagram/ui/group-node";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   BackgroundVariant,
@@ -16,6 +18,7 @@ import {
   type Connection,
   type OnNodeDrag,
   type NodeTypes,
+  type ResizeParams,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -23,32 +26,40 @@ import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/mod
 
 type Props = {
   diagram: Schema.Diagram;
+  editable?: boolean;
   onTableMove?: (tableId: string, position: Schema.Position) => void;
   onTableContextMenu?: (table: Schema.DatabaseTable, position: { x: number; y: number }) => void;
   onColumnContextMenu?: (column: Schema.TableColumn, position: { x: number; y: number }) => void;
   onRelationshipCreate?: (connection: Connection) => void;
   onRelationshipDelete?: (relationshipId: string) => void;
+  onGroupMove?: (group: Schema.DiagramGroup, position: Schema.Position) => void;
+  onGroupDelete?: (group: Schema.DiagramGroup) => void;
+  onGroupResize?: (group: Schema.DiagramGroup, bounds: ResizeParams) => void;
   onCanvasClick?: () => void;
 };
 
 export function DiagramEditor({
   diagram,
+  editable = true,
   onTableMove,
   onTableContextMenu,
   onColumnContextMenu,
   onRelationshipCreate,
   onRelationshipDelete,
+  onGroupMove,
+  onGroupDelete,
+  onGroupResize,
   onCanvasClick,
 }: Props) {
   const initialNodes = useMemo(
-    () => toFlowNodes(diagram, onTableContextMenu, onColumnContextMenu),
-    [diagram, onTableContextMenu, onColumnContextMenu],
+    () => toFlowNodes(diagram, onTableContextMenu, onColumnContextMenu, editable, onGroupDelete, onGroupResize),
+    [diagram, editable, onTableContextMenu, onColumnContextMenu, onGroupDelete, onGroupResize],
   );
   const initialEdges = useMemo(
     () => toFlowEdges(diagram, import.meta.env.DIAGRAM_SHOW_RELATIONSHIP_LABELS === "true"),
     [diagram],
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState<TableFlowNode>(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<DiagramFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   useEffect(() => {
@@ -69,7 +80,15 @@ export function DiagramEditor({
 
           const sourceNode = nodesById.get(edge.source);
           const targetNode = nodesById.get(edge.target);
-          if (!sourceNode || !targetNode || !edge.sourceHandle || !edge.targetHandle) return edge;
+          if (
+            !sourceNode ||
+            !targetNode ||
+            sourceNode.type !== "databaseTable" ||
+            targetNode.type !== "databaseTable" ||
+            !edge.sourceHandle ||
+            !edge.targetHandle
+          )
+            return edge;
 
           const sides = getShortestHandleSides(
             { position: sourceNode.position, width: sourceNode.data.table.width },
@@ -89,11 +108,15 @@ export function DiagramEditor({
     [nodes, setEdges],
   );
 
-  const onNodeDragStop = useCallback<OnNodeDrag<TableFlowNode>>(
+  const onNodeDragStop = useCallback<OnNodeDrag<DiagramFlowNode>>(
     (_, node) => {
-      onTableMove?.(node.id, node.position);
+      if (node.type === "diagramGroup") {
+        onGroupMove?.(node.data.group, node.position);
+      } else {
+        onTableMove?.(node.id, node.position);
+      }
     },
-    [onTableMove],
+    [onGroupMove, onTableMove],
   );
   const onEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
@@ -138,14 +161,18 @@ export function DiagramEditor({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        nodeTypes={{ databaseTable: TableNode } as NodeTypes}
+        nodeTypes={{ databaseTable: TableNode, diagramGroup: GroupNode } as NodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onEdgesDelete={onEdgesDelete}
-        deleteKeyCode={["Backspace", "Delete"]}
+        deleteKeyCode={editable ? ["Backspace", "Delete"] : null}
+        nodesDraggable={editable}
+        nodesConnectable={editable}
         onNodeDragStop={onNodeDragStop}
-        onNodeDrag={(_, node) => updateRelationshipSides(node)}
-        onConnect={onConnect}
+        onNodeDrag={(_, node) => {
+          if (node.type === "databaseTable") updateRelationshipSides(node);
+        }}
+        onConnect={editable ? onConnect : undefined}
         isValidConnection={isValidConnection}
         connectionMode={ConnectionMode.Loose}
         onPaneClick={onCanvasClick}
