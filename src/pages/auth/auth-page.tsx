@@ -14,8 +14,8 @@ type AuthPageProps = { mode: AuthMode };
 
 const pageCopy = {
   login: {
-    title: "Вход в аккаунт",
-    description: "Один аккаунт связывает схемы, рабочие пространства и историю изменений.",
+    title: "Вход",
+    description: "Удобный инструмент проектирования баз данных",
   },
   register: {
     title: "Новый аккаунт",

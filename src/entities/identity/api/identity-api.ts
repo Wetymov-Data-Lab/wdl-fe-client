@@ -55,7 +55,7 @@ function persistTokens(tokens: IdentityContract.TokenPair): void {
   });
 }
 
-async function refreshTokens(): Promise<void> {
+export async function refreshIdentityTokens(): Promise<void> {
   if (refreshRequest) return refreshRequest;
   const stored = readTokens();
   if (!stored) throw new IdentityApiError(401, "Сессия не найдена");
@@ -87,7 +87,7 @@ async function authorizedRequest<T>(path: string, init: RequestInit = {}, retry 
     });
   } catch (error) {
     if (retry && error instanceof IdentityApiError && error.status === 401) {
-      await refreshTokens();
+      await refreshIdentityTokens();
       return authorizedRequest<T>(path, init, false);
     }
     throw error;
@@ -124,6 +124,30 @@ export const identityApi = {
 
   account(accountId: string): Promise<IdentityContract.Account> {
     return authorizedRequest<IdentityContract.Account>(`/accounts/${accountId}`);
+  },
+
+  addIdentifier(accountId: string, input: IdentityContract.CreateIdentifier): Promise<IdentityContract.Identifier> {
+    return authorizedRequest<IdentityContract.Identifier>(`/identifiers/${accountId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateIdentifierPreferences(
+    accountId: string,
+    identifierId: string,
+    input: IdentityContract.IdentifierPreferences,
+  ): Promise<IdentityContract.Identifier> {
+    return authorizedRequest<IdentityContract.Identifier>(`/identifiers/${accountId}/${identifierId}/preferences`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteIdentifier(accountId: string, identifierId: string): Promise<void> {
+    return authorizedRequest<void>(`/identifiers/${accountId}/${identifierId}`, { method: "DELETE" });
   },
 
   deleteSession(accountId: string, sessionId: string): Promise<void> {

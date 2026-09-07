@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type PropsWithChildren } fro
 import { identityApi } from "@/entities/identity/api/identity-api";
 import { AuthContext, type AuthState } from "@/features/auth/model/auth-context";
 import type { IdentityApi } from "@/shared/api/contracts";
-import { clearTokens, readTokens } from "@/shared/auth/token-storage";
+import { authClearedEvent, clearTokens, readTokens } from "@/shared/auth/token-storage";
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [state, setState] = useState<AuthState>(() => (readTokens() ? "loading" : "anonymous"));
@@ -26,6 +26,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleClearedSession = () => {
+      setUser(null);
+      setState("anonymous");
+    };
+    window.addEventListener(authClearedEvent, handleClearedSession);
+    return () => window.removeEventListener(authClearedEvent, handleClearedSession);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

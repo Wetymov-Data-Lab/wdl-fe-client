@@ -16,7 +16,7 @@ export namespace CoreApi {
     id: Id;
     author_id: Id;
     created_at: string;
-    updated_at: string;
+    updated_at: string | null;
   };
 
   export type Realm = Audit & {
@@ -37,10 +37,9 @@ export namespace CoreApi {
     visibility: string;
     settings: Record<string, unknown>;
     notice: string | null;
-    author_id: string;
   };
 
-  export type UpdateRealm = Omit<CreateRealm, "author_id"> & { updated_by: string };
+  export type UpdateRealm = CreateRealm;
 
   export type Project = Audit & {
     realm_id: Id;
@@ -128,6 +127,18 @@ export namespace CoreApi {
   };
 
   export type CreateRelationship = Omit<Relationship, keyof Audit> & { author_id: string };
+
+  export type DiagramGroup = {
+    id: Id;
+    database_id: Id;
+    name: string;
+    position: Position;
+    width: number;
+    height: number;
+    color: string | null;
+    is_collapsed: boolean;
+    table_ids: Id[];
+  };
 }
 
 export namespace IdentityApi {
@@ -181,6 +192,17 @@ export namespace IdentityApi {
     last_used_at: string | null;
     created_at: string;
   };
+
+  export type CreateIdentifier = {
+    type: string;
+    value: string;
+    provider: string | null;
+    provider_user_id: string | null;
+    is_public_contact: boolean;
+    receive_notifications: boolean;
+  };
+
+  export type IdentifierPreferences = Pick<Identifier, "is_public_contact" | "receive_notifications">;
 
   export type Session = {
     id: string;

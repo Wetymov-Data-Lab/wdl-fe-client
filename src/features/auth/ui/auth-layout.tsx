@@ -16,17 +16,14 @@ export function AuthLayout({ title, description, children }: AuthLayoutProps) {
 
       <div className="access-layout">
         <aside className="access-intro">
-          <p className="access-index">01 — ACCOUNT</p>
+          <img className="product-brand__mark_big" src="/logo.svg" alt="" />
+
           <h1>Проектировка диаграмм БД.</h1>
           <p>{description}</p>
           <dl className="access-service">
             <div>
               <dt>Сервис</dt>
-              <dd>Identity</dd>
-            </div>
-            <div>
-              <dt>Сессия</dt>
-              <dd>OAuth 2.0</dd>
+              <dd>Client</dd>
             </div>
             <div>
               <dt>Статус</dt>
@@ -40,7 +37,6 @@ export function AuthLayout({ title, description, children }: AuthLayoutProps) {
         <section className="access-workspace">
           <div className="access-form-frame">
             <header>
-              <span>Авторизация</span>
               <h2>{title}</h2>
             </header>
             {children}
@@ -50,7 +46,6 @@ export function AuthLayout({ title, description, children }: AuthLayoutProps) {
 
       <footer className="access-footer">
         <span>© {new Date().getFullYear()} Wetymov Data Labs</span>
-        <span>Безопасное подключение</span>
       </footer>
     </main>
   );

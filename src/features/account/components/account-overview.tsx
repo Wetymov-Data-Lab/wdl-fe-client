@@ -1,16 +1,13 @@
 import { formatIdentityDate } from "@/entities/identity/lib/presentation";
 import type { IdentityApi } from "@/shared/api/contracts";
 import { CopyButton } from "@/shared/ui/copy-button";
-import { ShieldIcon } from "@/shared/ui/icons";
-import { AccountSectionHeader } from "@/features/account/ui/account-section-header";
+import { AccountSectionHeader } from "@/features/account/components/account-section-header";
 
 type AccountOverviewProps = { account: IdentityApi.Account };
-
+// TODO: Посмотреть подключение 2FA
 export function AccountOverview({ account }: AccountOverviewProps) {
   const profile = account.profile;
   const details = [
-    ["Тип субъекта", account.subject],
-    ["Версия", `v${account.version}`],
     ["Создан", formatIdentityDate(account.created_at)],
     ["Последняя активность", formatIdentityDate(account.last_active_at)],
     ["Локаль", profile?.locale ?? "—"],
@@ -19,7 +16,7 @@ export function AccountOverview({ account }: AccountOverviewProps) {
 
   return (
     <section className="account-section" id="overview">
-      <AccountSectionHeader eyebrow="Профиль" title="Об аккаунте" />
+      <AccountSectionHeader title="Об аккаунте" />
       <div className="detail-grid">
         <div className="detail-item detail-item--wide">
           <span>ID аккаунта</span>
@@ -35,7 +32,7 @@ export function AccountOverview({ account }: AccountOverviewProps) {
           </div>
         ))}
       </div>
-      <div className="security-note">
+      {/* <div className="security-note">
         <ShieldIcon />
         <div>
           <strong>Двухфакторная защита</strong>
@@ -44,7 +41,7 @@ export function AccountOverview({ account }: AccountOverviewProps) {
         <span className={account.is_2fa_enforced ? "enabled" : "disabled"}>
           {account.is_2fa_enforced ? "Включена" : "Не включена"}
         </span>
-      </div>
+      </div> */}
     </section>
   );
 }

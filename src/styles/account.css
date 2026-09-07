@@ -27,9 +27,9 @@
 .profile-avatar {
   position: relative;
   display: grid;
-  width: 72px;
-  height: 72px;
-  flex: 0 0 72px;
+  width: 172px;
+  height: 172px;
+  flex: 0 0 172px;
   place-items: center;
   border: 1px solid var(--ink);
   border-radius: var(--radius-control);
@@ -207,7 +207,6 @@
 }
 .section-heading {
   display: flex;
-  min-height: 92px;
   align-items: flex-end;
   justify-content: space-between;
   gap: 28px;
@@ -231,7 +230,6 @@
 }
 .section-heading > p {
   max-width: 410px;
-  margin: 0;
   color: var(--quiet);
   font-size: var(--text-small);
   line-height: 1.5;
@@ -350,6 +348,19 @@
 .session-list {
   display: grid;
 }
+.identifier-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.identifier-toolbar p {
+  margin: 0;
+  color: var(--quiet);
+  font-size: var(--text-small);
+}
 .identifier-card,
 .session-card {
   display: flex;
@@ -433,6 +444,138 @@
   margin: 6px 0 0;
   color: var(--quiet);
   font-size: var(--text-small);
+}
+.identifier-card__actions {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 6px;
+  padding-left: 16px;
+  border-left: 1px solid var(--line-soft);
+}
+.identifier-card__actions label,
+.identifier-dialog__options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+.identifier-card__actions input,
+.identifier-dialog__options input {
+  accent-color: var(--accent);
+}
+.identifier-card__delete {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  color: var(--danger);
+  background: transparent;
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+.identifier-card__delete:disabled {
+  color: var(--quiet);
+  cursor: not-allowed;
+}
+.identifier-action-error {
+  margin: 0;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--color-danger-line);
+  color: var(--danger);
+  background: var(--color-danger-soft);
+  font-size: var(--text-small);
+}
+.identifier-dialog {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--color-overlay);
+  backdrop-filter: blur(2px);
+}
+.identifier-dialog__card {
+  display: grid;
+  width: min(100%, 520px);
+  gap: 17px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 10px 10px 0 var(--color-shadow-strong);
+}
+.identifier-dialog__card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.identifier-dialog__card header span {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: var(--text-small);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.identifier-dialog__card h2 {
+  margin: 5px 0 0;
+  font-size: var(--text-large);
+}
+.identifier-dialog__card header button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--surface);
+  cursor: pointer;
+}
+.identifier-dialog__card > label,
+.identifier-dialog__provider-fields label {
+  display: grid;
+  gap: 7px;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 680;
+}
+.identifier-dialog__card input:not([type="checkbox"]),
+.identifier-dialog__card select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--color-control-line);
+  border-radius: var(--radius-control);
+  outline: none;
+  color: var(--ink);
+  background: var(--surface);
+}
+.identifier-dialog__card input:focus,
+.identifier-dialog__card select:focus {
+  border-color: var(--accent);
+}
+.identifier-dialog__provider-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.identifier-dialog__options {
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid var(--line-soft);
+  background: var(--color-surface-muted);
+}
+.identifier-dialog__card .identifier-action-error {
+  padding: 10px 12px;
+  border: 1px solid var(--color-danger-line);
+}
+.identifier-dialog__card footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 .session-card--current {
   box-shadow: inset 3px 0 var(--accent);
@@ -575,6 +718,22 @@
   .session-card {
     align-items: flex-start;
     padding: 15px;
+  }
+  .identifier-toolbar,
+  .identifier-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .identifier-toolbar .button {
+    align-self: flex-start;
+  }
+  .identifier-card__actions {
+    padding: 12px 0 0 58px;
+    border-top: 1px solid var(--line-soft);
+    border-left: 0;
+  }
+  .identifier-dialog__provider-fields {
+    grid-template-columns: 1fr;
   }
   .session-card {
     flex-wrap: wrap;

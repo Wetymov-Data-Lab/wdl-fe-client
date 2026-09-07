@@ -25,14 +25,7 @@ export function LoginForm({ pending, error, onSubmit }: LoginFormProps) {
 
   return (
     <form className="access-form" onSubmit={submit}>
-      <FormField
-        label="Рабочая почта"
-        name="email"
-        type="email"
-        required
-        autoComplete="email"
-        placeholder="name@company.ru"
-      />
+      <FormField label="Почта" name="email" type="email" required autoComplete="email" placeholder="name@company.ru" />
       <FormField
         label="Пароль"
         name="password"
@@ -48,7 +41,7 @@ export function LoginForm({ pending, error, onSubmit }: LoginFormProps) {
           {error}
         </p>
       )}
-      <AuthSubmitButton pending={pending}>Войти в пространство</AuthSubmitButton>
+      <AuthSubmitButton pending={pending}>Войти в аккаунт</AuthSubmitButton>
       <p className="access-switch">
         Нет аккаунта? <Link to="/register">Создать</Link>
       </p>

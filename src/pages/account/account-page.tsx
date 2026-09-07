@@ -1,13 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { identityApi } from "@/entities/identity/api/identity-api";
-import { AccountHeader } from "@/features/account/ui/account-header";
-import { AccountNavigation } from "@/features/account/ui/account-navigation";
-import { AccountOverview } from "@/features/account/ui/account-overview";
-import { IdentifiersSection } from "@/features/account/ui/identifiers-section";
-import { SessionsSection } from "@/features/account/ui/sessions-section";
+import { AccountHeader } from "@/features/account/components/account-header";
+import { AccountNavigation } from "@/features/account/components/account-navigation";
+import { AccountOverview } from "@/features/account/components/account-overview";
+import { IdentifiersSection } from "@/features/account/components/identifiers-section";
+import { SessionsSection } from "@/features/account/components/sessions-section";
 import { useAuth } from "@/features/auth/model/use-auth";
 import { getCurrentSessionId } from "@/shared/auth/token-storage";
+import type { IdentityApi } from "@/shared/api/contracts";
+import { IdentityApiError } from "@/entities/identity/api/identity-api";
+
+function identifierErrorMessage(error: unknown): string {
+  if (error instanceof IdentityApiError && error.status === 409) return "Такой идентификатор уже используется.";
+  if (error instanceof IdentityApiError) return error.message;
+  if (error instanceof DOMException && error.name === "AbortError") return "Сервис не ответил вовремя.";
+  if (error instanceof TypeError) return "Не удалось подключиться к сервису идентификации.";
+  return "Не удалось сохранить идентификатор. Попробуйте ещё раз.";
+}
 
 export function AccountPage() {
   const auth = useAuth();
@@ -30,6 +40,35 @@ export function AccountPage() {
       await queryClient.invalidateQueries({ queryKey });
     },
   });
+
+  const addIdentifierMutation = useMutation({
+    mutationFn: (input: IdentityApi.CreateIdentifier) => identityApi.addIdentifier(accountId!, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const preferencesMutation = useMutation({
+    mutationFn: ({ identifierId, input }: { identifierId: string; input: IdentityApi.IdentifierPreferences }) =>
+      identityApi.updateIdentifierPreferences(accountId!, identifierId, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const deleteIdentifierMutation = useMutation({
+    mutationFn: (identifierId: string) => identityApi.deleteIdentifier(accountId!, identifierId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const identifierError = addIdentifierMutation.error ?? preferencesMutation.error ?? deleteIdentifierMutation.error;
+  const dismissIdentifierError = () => {
+    addIdentifierMutation.reset();
+    preferencesMutation.reset();
+    deleteIdentifierMutation.reset();
+  };
 
   if (accountQuery.isLoading) {
     return (
@@ -65,7 +104,26 @@ export function AccountPage() {
         <AccountNavigation identifiersCount={account.identifiers.length} sessionsCount={account.sessions.length} />
         <div className="account-sections">
           <AccountOverview account={account} />
-          <IdentifiersSection identifiers={account.identifiers} />
+          <IdentifiersSection
+            identifiers={account.identifiers}
+            adding={addIdentifierMutation.isPending}
+            pendingIdentifierId={
+              preferencesMutation.isPending
+                ? preferencesMutation.variables.identifierId
+                : deleteIdentifierMutation.isPending
+                  ? deleteIdentifierMutation.variables
+                  : undefined
+            }
+            error={identifierError ? identifierErrorMessage(identifierError) : null}
+            onAdd={(input) => addIdentifierMutation.mutate(input)}
+            onUpdatePreferences={(identifier, input) => preferencesMutation.mutate({ identifierId: identifier.id, input })}
+            onDelete={(identifier) => {
+              if (window.confirm(`Удалить идентификатор «${identifier.value}»?`)) {
+                deleteIdentifierMutation.mutate(identifier.id);
+              }
+            }}
+            onDismissError={dismissIdentifierError}
+          />
           <SessionsSection
             sessions={sessions}
             currentSessionId={currentSessionId}

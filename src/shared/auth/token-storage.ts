@@ -5,6 +5,7 @@ export type StoredTokens = {
 };
 
 const storageKey = "wdl.identity.tokens";
+export const authClearedEvent = "wdl:auth-cleared";
 
 export function readTokens(): StoredTokens | null {
   try {
@@ -21,13 +22,14 @@ export function writeTokens(tokens: StoredTokens): void {
 
 export function clearTokens(): void {
   localStorage.removeItem(storageKey);
+  window.dispatchEvent(new Event(authClearedEvent));
 }
 
 export function getAccessToken(): string | null {
   return readTokens()?.accessToken ?? null;
 }
 
-export function getCurrentSessionId(): string | null {
+function getAccessTokenClaims(): { sid?: unknown; sub?: unknown } | null {
   const token = getAccessToken();
   if (!token) return null;
 
@@ -35,9 +37,19 @@ export function getCurrentSessionId(): string | null {
     const payload = token.split(".")[1];
     if (!payload) return null;
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const claims = JSON.parse(atob(normalized)) as { sid?: unknown };
-    return typeof claims.sid === "string" ? claims.sid : null;
+    return JSON.parse(atob(normalized)) as { sid?: unknown; sub?: unknown };
   } catch {
     return null;
   }
+}
+
+export function getCurrentSessionId(): string | null {
+  const claims = getAccessTokenClaims();
+  return typeof claims?.sid === "string" ? claims.sid : null;
+}
+
+export function getCurrentAccountId(): string {
+  const claims = getAccessTokenClaims();
+  if (typeof claims?.sub !== "string") throw new Error("В access token отсутствует идентификатор пользователя");
+  return claims.sub;
 }

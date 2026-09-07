@@ -1,6 +1,6 @@
 import type { IdentityApi } from "@/shared/api/contracts";
 import { accountStatusLabel } from "@/entities/identity/lib/presentation";
-import { CheckIcon, LogOutIcon } from "@/shared/ui/icons";
+import { LogOutIcon } from "@/shared/ui/icons";
 
 type AccountHeaderProps = {
   account: IdentityApi.Account;
@@ -16,9 +16,6 @@ export function AccountHeader({ account, email, onLogout }: AccountHeaderProps) 
     <header className="account-hero">
       <div className="profile-avatar">
         {profile?.picture_url ? <img src={profile.picture_url} alt="" /> : name.slice(0, 1).toUpperCase()}
-        <span>
-          <CheckIcon />
-        </span>
       </div>
       <div className="account-hero__identity">
         <div className="account-hero__name">
@@ -32,7 +29,7 @@ export function AccountHeader({ account, email, onLogout }: AccountHeaderProps) 
       </div>
       <button className="account-logout" type="button" onClick={() => void onLogout()}>
         <LogOutIcon />
-        <span>Выйти из аккаунта</span>
+        <span>Выход</span>
       </button>
     </header>
   );

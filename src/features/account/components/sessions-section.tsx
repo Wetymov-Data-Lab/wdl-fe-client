@@ -1,6 +1,6 @@
 import type { IdentityApi } from "@/shared/api/contracts";
-import { AccountSectionHeader } from "@/features/account/ui/account-section-header";
-import { SessionCard } from "@/features/account/ui/session-card";
+import { AccountSectionHeader } from "@/features/account/components/account-section-header";
+import { SessionCard } from "@/features/account/components/session-card";
 
 type SessionsSectionProps = {
   sessions: IdentityApi.Session[];
@@ -21,11 +21,7 @@ export function SessionsSection({
 }: SessionsSectionProps) {
   return (
     <section className="account-section" id="sessions">
-      <AccountSectionHeader
-        eyebrow="Безопасность"
-        title="Активные сессии"
-        description="Устройства, на которых выполнен вход. Завершите сессию, если не узнаёте устройство."
-      />
+      <AccountSectionHeader title="Активные сессии" description="Устройства, на которых выполнен вход." />
       {hasError && (
         <div className="session-error">Не удалось завершить сессию. Обновите страницу и попробуйте ещё раз.</div>
       )}
