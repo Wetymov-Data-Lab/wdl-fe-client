@@ -6,6 +6,11 @@ import { column, database, group, loadWorkspace, project, realm, relationship, t
 import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/model/relationship-rules";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
 import { useAuth } from "@/features/auth/model/use-auth";
+import {
+  clearLastSelectedDatabaseId,
+  readLastSelectedDatabaseId,
+  writeLastSelectedDatabaseId,
+} from "@/pages/editor/model/editor-selection-storage";
 import { readCssColorToken } from "@/shared/lib/css-token";
 import { DiagramEditor } from "@/widgets/diagram/ui/diagram-editor";
 import { WorkspacePathPicker } from "@/widgets/workspace-path/ui/workspace-path-picker";
@@ -43,6 +48,9 @@ export function EditorPage() {
   const [browserRealmId, setBrowserRealmId] = useState<Schema.Id | null>(null);
   const [browserProjectId, setBrowserProjectId] = useState<Schema.Id | null>(null);
   const requestedDatabaseId = params.get("databaseId");
+  const [restoredDatabaseId, setRestoredDatabaseId] = useState<Schema.Id | null>(() =>
+    requestedDatabaseId ? null : readLastSelectedDatabaseId(),
+  );
   const workspaceQuery = useQuery({ queryKey: schemaQueryKeys.workspace, queryFn: loadWorkspace });
   const visibleRealmIds = new Set(workspaceQuery.data?.realms.map((realm) => realm.id) ?? []);
   const visibleProjectIds = new Set(
@@ -50,7 +58,7 @@ export function EditorPage() {
       [],
   );
   const databaseId = workspaceQuery.data?.databases.find(
-    (database) => database.id === requestedDatabaseId && visibleProjectIds.has(database.projectId),
+    (database) => database.id === (requestedDatabaseId ?? restoredDatabaseId) && visibleProjectIds.has(database.projectId),
   )?.id;
   const diagramQuery = useQuery({
     queryKey: schemaQueryKeys.diagram(databaseId),
@@ -245,16 +253,36 @@ export function EditorPage() {
     ? (diagramQuery.data?.columns.filter((column) => column.tableId === selectedTable.id) ?? [])
     : [];
 
+  useEffect(() => {
+    if (!workspaceQuery.data) return;
+
+    if (requestedDatabaseId && databaseId) {
+      writeLastSelectedDatabaseId(databaseId);
+      return;
+    }
+
+    if (!requestedDatabaseId && restoredDatabaseId) {
+      if (databaseId) {
+        setParams({ databaseId }, { replace: true });
+      } else {
+        clearLastSelectedDatabaseId();
+      }
+    }
+  }, [databaseId, requestedDatabaseId, restoredDatabaseId, setParams, workspaceQuery.data]);
+
   const selectRealm = (realmId: Schema.Id | null) => {
+    setRestoredDatabaseId(null);
     setBrowserRealmId(realmId);
     setBrowserProjectId(null);
     setParams({}, { replace: true });
   };
   const selectProject = (projectId: Schema.Id | null) => {
+    setRestoredDatabaseId(null);
     setBrowserProjectId(projectId);
     setParams({}, { replace: true });
   };
   const selectDatabase = (selectedDatabaseId: Schema.Id | null) => {
+    setRestoredDatabaseId(null);
     if (selectedDatabaseId) setParams({ databaseId: selectedDatabaseId });
     else setParams({}, { replace: true });
   };
@@ -379,12 +407,9 @@ export function EditorPage() {
     return (
       <main className="editor-state editor-state--picker">
         <div>
-          <span className="editor-state__eyebrow">Навигация по схемам</span>
           <h1>{requestedDatabaseId ? "Схема недоступна" : "Выберите базу данных"}</h1>
           <p>
-            {requestedDatabaseId
-              ? "Эта база данных отсутствует среди доступных вам realms. Выберите другую схему."
-              : "Редактор загрузит диаграмму только после вашего явного выбора."}
+            {requestedDatabaseId ? "Эта база данных отсутствует среди доступных вам realms. Выберите другую схему." : ""}
           </p>
           {pathPicker}
           <Link className="button button--secondary editor-state__manage-link" to="/realms">
@@ -727,9 +752,6 @@ export function EditorPage() {
           Область не обновлена: {groupUpdate.error?.message ?? groupDeletion.error?.message}
         </div>
       )}
-      <div className="canvas-hint">
-        Колесо: масштаб. Space + перетаскивание: панорама. Выберите область, чтобы изменить её размер.
-      </div>
     </main>
   );
 }

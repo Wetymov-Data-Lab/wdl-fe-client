@@ -22,9 +22,6 @@ export function WorkspacePathPicker({
 
   return (
     <div className="workspace-path" aria-label="Путь к схеме">
-      <span className="workspace-path__root" aria-hidden="true">
-        ◫
-      </span>
       <PathSegment
         ariaLabel="Выберите realm"
         value={realmId ?? ""}
@@ -37,7 +34,7 @@ export function WorkspacePathPicker({
         onChange={(value) => onRealmChange(value || null)}
       />
       <span className="workspace-path__separator" aria-hidden="true">
-        ›
+        {">"}
       </span>
       <PathSegment
         ariaLabel="Выберите проект"
@@ -48,7 +45,7 @@ export function WorkspacePathPicker({
         onChange={(value) => onProjectChange(value || null)}
       />
       <span className="workspace-path__separator" aria-hidden="true">
-        ›
+        {">"}
       </span>
       <PathSegment
         ariaLabel="Выберите базу данных"
