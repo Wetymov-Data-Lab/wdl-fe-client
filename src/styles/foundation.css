@@ -316,8 +316,8 @@ select:focus-visible {
     height: 32px;
   }
   .product-brand__mark_big {
-    width: 128px;
-    height: 128px;
+    width: 64px;
+    height: 64px;
   }
   .nav-link {
     padding: 0 10px;

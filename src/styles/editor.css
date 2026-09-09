@@ -141,7 +141,10 @@
 }
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--accent) !important;
-  stroke-width: 3px !important;
+  stroke-width: 2px !important;
+}
+.react-flow__edge.selectable:hover .react-flow__edge-path {
+  stroke: var(--color-accent-strong) !important;
 }
 .react-flow__edge.selected .react-flow__edge-text {
   fill: var(--color-accent-strong) !important;
