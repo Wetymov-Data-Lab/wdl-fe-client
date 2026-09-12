@@ -1,5 +1,5 @@
 import type { IdentityApi } from "@/shared/api/contracts";
-import { accountStatusLabel } from "@/entities/identity/lib/presentation";
+import { accountStatusLabel, safeProfileUrl } from "@/entities/identity/lib/presentation";
 import { LogOutIcon } from "@/shared/ui/icons";
 
 type AccountHeaderProps = {
@@ -11,12 +11,11 @@ type AccountHeaderProps = {
 export function AccountHeader({ account, email, onLogout }: AccountHeaderProps) {
   const profile = account.profile;
   const name = profile?.display_name ?? email ?? "Пользователь";
+  const pictureUrl = safeProfileUrl(profile?.picture_url ?? null);
 
   return (
     <header className="account-hero">
-      <div className="profile-avatar">
-        {profile?.picture_url ? <img src={profile.picture_url} alt="" /> : name.slice(0, 1).toUpperCase()}
-      </div>
+      <div className="profile-avatar">{pictureUrl ? <img src={pictureUrl} alt="" /> : name.slice(0, 1).toUpperCase()}</div>
       <div className="account-hero__identity">
         <div className="account-hero__name">
           <h1>{name}</h1>

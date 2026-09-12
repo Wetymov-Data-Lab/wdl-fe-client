@@ -8,8 +8,11 @@ type AccountNavigationProps = {
 export function AccountNavigation({ identifiersCount, sessionsCount }: AccountNavigationProps) {
   return (
     <aside className="account-nav" aria-label="Настройки аккаунта">
-      <a className="active" href="#overview">
-        <UserIcon /> Обзор
+      <a className="active" href="#profile">
+        <UserIcon /> Профиль
+      </a>
+      <a href="#overview">
+        <UserIcon /> Аккаунт
       </a>
       <a href="#identifiers">
         <FingerprintIcon /> Идентификаторы <b>{identifiersCount}</b>

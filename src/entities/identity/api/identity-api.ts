@@ -126,6 +126,18 @@ export const identityApi = {
     return authorizedRequest<IdentityContract.Account>(`/accounts/${accountId}`);
   },
 
+  profile(accountId: string): Promise<IdentityContract.Profile> {
+    return authorizedRequest<IdentityContract.Profile>(`/profiles/${accountId}`);
+  },
+
+  updateProfile(accountId: string, input: IdentityContract.UpdateProfile): Promise<IdentityContract.Profile> {
+    return authorizedRequest<IdentityContract.Profile>(`/profiles/${accountId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  },
+
   addIdentifier(accountId: string, input: IdentityContract.CreateIdentifier): Promise<IdentityContract.Identifier> {
     return authorizedRequest<IdentityContract.Identifier>(`/identifiers/${accountId}`, {
       method: "POST",

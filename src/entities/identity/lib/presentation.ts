@@ -20,6 +20,16 @@ export function formatIdentityDate(value: string | null): string {
   return value ? dateFormatter.format(new Date(value)) : "—";
 }
 
+export function safeProfileUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getSessionDevice(userAgent: string): { browser: string; platform: string } {
   const browsers = [
     ["Edg/", "Microsoft Edge"],

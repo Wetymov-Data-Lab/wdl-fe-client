@@ -6,6 +6,7 @@ import { column, database, group, loadWorkspace, project, realm, relationship, t
 import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/model/relationship-rules";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
 import { useAuth } from "@/features/auth/model/use-auth";
+import { ProfileLink } from "@/entities/identity/ui/profile-link";
 import {
   clearLastSelectedDatabaseId,
   readLastSelectedDatabaseId,
@@ -505,8 +506,11 @@ export function EditorPage() {
             <strong>{activeDatabase?.name ?? databaseId}</strong>
             <small>{diagramQuery.data.tables.length} таблиц</small>
             {activeDatabase && (
-              <small title={activeDatabase.authorId}>
-                Автор: {activeDatabase.authorId === auth.user?.sub ? "вы" : `${activeDatabase.authorId.slice(0, 8)}…`}
+              <small>
+                Автор:{" "}
+                <ProfileLink accountId={activeDatabase.authorId} currentAccountId={auth.user?.sub} className="profile-link">
+                  {activeDatabase.authorId === auth.user?.sub ? "вы" : `${activeDatabase.authorId.slice(0, 8)}…`}
+                </ProfileLink>
               </small>
             )}
           </div>

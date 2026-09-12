@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { database, loadWorkspace, project, realm } from "@/entities/schema/api";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
 import { useAuth } from "@/features/auth/model/use-auth";
+import { ProfileLink } from "@/entities/identity/ui/profile-link";
 
 type FormState =
   | { entity: "realm"; mode: "create"; name: string; slug: string; visibility: string }
@@ -148,7 +149,12 @@ export function RealmsPage() {
                       <span className={`realm-visibility realm-visibility--${realm.visibility}`}>
                         {visibilityLabel[realm.visibility] ?? realm.visibility}
                       </span>
-                      <span title={realm.authorId}>Автор: {isOwner ? "вы" : shortId(realm.authorId)}</span>
+                      <span>
+                        Автор:{" "}
+                        <ProfileLink accountId={realm.authorId} currentAccountId={auth.user?.sub} className="profile-link">
+                          {isOwner ? "вы" : shortId(realm.authorId)}
+                        </ProfileLink>
+                      </span>
                       <span>Создан {formatDate(realm.createdAt)}</span>
                     </div>
                   </div>
@@ -195,8 +201,14 @@ export function RealmsPage() {
                           <div className="project-card__title">
                             <span>ПРОЕКТ</span>
                             <h3>{project.name}</h3>
-                            <small className="entity-author" title={project.authorId}>
-                              Автор: {project.authorId === auth.user?.sub ? "вы" : shortId(project.authorId)}
+                            <small className="entity-author">
+                              Автор:{" "}
+                              <ProfileLink
+                                accountId={project.authorId}
+                                currentAccountId={auth.user?.sub}
+                                className="profile-link">
+                                {project.authorId === auth.user?.sub ? "вы" : shortId(project.authorId)}
+                              </ProfileLink>
                             </small>
                             {isOwner && (
                               <div className="entity-actions">

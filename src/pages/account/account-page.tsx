@@ -6,6 +6,7 @@ import { AccountNavigation } from "@/features/account/components/account-navigat
 import { AccountOverview } from "@/features/account/components/account-overview";
 import { IdentifiersSection } from "@/features/account/components/identifiers-section";
 import { SessionsSection } from "@/features/account/components/sessions-section";
+import { ProfileForm } from "@/features/account/components/profile-form";
 import { useAuth } from "@/features/auth/model/use-auth";
 import { getCurrentSessionId } from "@/shared/auth/token-storage";
 import type { IdentityApi } from "@/shared/api/contracts";
@@ -17,6 +18,13 @@ function identifierErrorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === "AbortError") return "Сервис не ответил вовремя.";
   if (error instanceof TypeError) return "Не удалось подключиться к сервису идентификации.";
   return "Не удалось сохранить идентификатор. Попробуйте ещё раз.";
+}
+
+function profileErrorMessage(error: unknown): string {
+  if (error instanceof IdentityApiError) return error.message;
+  if (error instanceof DOMException && error.name === "AbortError") return "Сервис не ответил вовремя.";
+  if (error instanceof TypeError) return "Не удалось подключиться к сервису идентификации.";
+  return "Не удалось сохранить профиль. Попробуйте ещё раз.";
 }
 
 export function AccountPage() {
@@ -63,6 +71,16 @@ export function AccountPage() {
     },
   });
 
+  const profileMutation = useMutation({
+    mutationFn: (input: IdentityApi.UpdateProfile) => identityApi.updateProfile(accountId!, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey }),
+        queryClient.invalidateQueries({ queryKey: ["identity", "profile", accountId] }),
+      ]);
+    },
+  });
+
   const identifierError = addIdentifierMutation.error ?? preferencesMutation.error ?? deleteIdentifierMutation.error;
   const dismissIdentifierError = () => {
     addIdentifierMutation.reset();
@@ -103,6 +121,13 @@ export function AccountPage() {
       <div className="account-layout">
         <AccountNavigation identifiersCount={account.identifiers.length} sessionsCount={account.sessions.length} />
         <div className="account-sections">
+          <ProfileForm
+            profile={account.profile}
+            pending={profileMutation.isPending}
+            saved={profileMutation.isSuccess}
+            error={profileMutation.error ? profileErrorMessage(profileMutation.error) : null}
+            onSubmit={profileMutation.mutate}
+          />
           <AccountOverview account={account} />
           <IdentifiersSection
             identifiers={account.identifiers}

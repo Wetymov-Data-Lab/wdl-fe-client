@@ -178,6 +178,20 @@ export namespace IdentityApi {
     updated_at: string | null;
   };
 
+  export type UpdateProfile = Pick<
+    Profile,
+    | "display_name"
+    | "given_name"
+    | "family_name"
+    | "bio"
+    | "job_title"
+    | "organization"
+    | "locale"
+    | "time_zone"
+    | "picture_url"
+    | "website_url"
+  >;
+
   export type Identifier = {
     id: string;
     account_id: string;

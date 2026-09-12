@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { loadWorkspace } from "@/entities/schema/api";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
 import { useAuth } from "@/features/auth/model/use-auth";
+import { ProfileLink } from "@/entities/identity/ui/profile-link";
 
 export function CatalogPage() {
   const auth = useAuth();
@@ -60,7 +61,14 @@ export function CatalogPage() {
               <article className="catalog-card" key={realm.id}>
                 <header>
                   <span>PUBLIC REALM</span>
-                  <small>{isOwner ? "Ваш realm" : `Автор ${shortId(realm.authorId)}`}</small>
+                  <small>
+                    {isOwner ? "Ваш realm" : "Автор "}
+                    {!isOwner && (
+                      <ProfileLink accountId={realm.authorId} currentAccountId={auth.user?.sub} className="profile-link">
+                        {shortId(realm.authorId)}
+                      </ProfileLink>
+                    )}
+                  </small>
                 </header>
                 <h2>{realm.name}</h2>
                 <code>/{realm.slug}</code>

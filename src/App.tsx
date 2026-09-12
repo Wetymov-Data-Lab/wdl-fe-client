@@ -8,6 +8,7 @@ import { CatalogPage } from "@/pages/catalog/catalog-page";
 import { DashboardPage } from "@/pages/dashboard/dashboard-page";
 import { EditorPage } from "@/pages/editor/editor-page";
 import { RealmsPage } from "@/pages/realms/realms-page";
+import { ProfilePage } from "@/pages/profile/profile-page";
 import { AppHeader } from "@/widgets/app-header/ui/app-header";
 import "@/App.css";
 
@@ -40,6 +41,7 @@ function Shell() {
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/realms" element={<RealmsPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/profiles/:accountId" element={<ProfilePage />} />
           <Route path="/projects" element={<Navigate to="/realms" replace />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
         </Routes>
