@@ -10,7 +10,6 @@ function valueOrDash(value: string | null): string {
 }
 
 export function ProfileDetails({ profile }: ProfileDetailsProps) {
-  const pictureUrl = safeProfileUrl(profile.picture_url);
   const websiteUrl = safeProfileUrl(profile.website_url);
   const details = [
     ["Отображаемое имя", profile.display_name],
@@ -51,16 +50,6 @@ export function ProfileDetails({ profile }: ProfileDetailsProps) {
         <div className="detail-item detail-item--wide">
           <span>О себе</span>
           <p>{valueOrDash(profile.bio)}</p>
-        </div>
-        <div className="detail-item detail-item--wide">
-          <span>Аватар</span>
-          {pictureUrl ? (
-            <a href={pictureUrl} target="_blank" rel="noreferrer">
-              {profile.picture_url}
-            </a>
-          ) : (
-            <strong>—</strong>
-          )}
         </div>
         <div className="detail-item detail-item--wide">
           <span>Сайт</span>

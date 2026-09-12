@@ -62,6 +62,30 @@
   width: 11px;
   height: 11px;
 }
+.profile-avatar--editable {
+  overflow: hidden;
+}
+.profile-avatar > .profile-avatar__edit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  width: auto;
+  height: auto;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  opacity: 0;
+  color: var(--color-surface);
+  background: var(--color-overlay);
+  transition: opacity 160ms ease;
+}
+.profile-avatar--editable:hover > .profile-avatar__edit {
+  opacity: 1;
+}
+.profile-avatar > .profile-avatar__edit svg {
+  width: 32px;
+  height: 32px;
+}
 .account-hero__identity {
   min-width: 0;
 }

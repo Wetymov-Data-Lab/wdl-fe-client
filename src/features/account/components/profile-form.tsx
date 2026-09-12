@@ -10,7 +10,7 @@ type ProfileFormProps = {
   onSubmit: (profile: IdentityApi.UpdateProfile) => void;
 };
 
-type ProfileField = Exclude<keyof IdentityApi.UpdateProfile, "bio">;
+type ProfileField = Exclude<keyof IdentityApi.UpdateProfile, "bio" | "picture_url">;
 
 const fields: ReadonlyArray<{
   name: ProfileField;
@@ -27,7 +27,6 @@ const fields: ReadonlyArray<{
   { name: "organization", label: "Организация", maxLength: 255, autoComplete: "organization" },
   { name: "locale", label: "Локаль", maxLength: 64, placeholder: "ru-RU" },
   { name: "time_zone", label: "Часовой пояс", maxLength: 64, placeholder: "Europe/Moscow" },
-  { name: "picture_url", label: "Ссылка на аватар", maxLength: 2048, type: "url", autoComplete: "photo" },
   { name: "website_url", label: "Личный сайт", maxLength: 2048, type: "url", autoComplete: "url" },
 ];
 
@@ -49,7 +48,7 @@ export function ProfileForm({ profile, pending, saved, error, onSubmit }: Profil
       organization: optionalValue(form, "organization"),
       locale: optionalValue(form, "locale"),
       time_zone: optionalValue(form, "time_zone"),
-      picture_url: optionalValue(form, "picture_url"),
+      picture_url: profile?.picture_url ?? null,
       website_url: optionalValue(form, "website_url"),
     });
   };
