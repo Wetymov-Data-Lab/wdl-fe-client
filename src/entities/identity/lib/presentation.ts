@@ -11,9 +11,8 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
 export const accountStatusLabel = {
   pending: "Ожидает активации",
   active: "Активен",
-  inactive: "Неактивен",
+  deactivated: "Деактивирован",
   suspended: "Приостановлен",
-  deleted: "Удалён",
 } satisfies Record<IdentityApi.AccountStatus, string>;
 
 export function formatIdentityDate(value: string | null): string {

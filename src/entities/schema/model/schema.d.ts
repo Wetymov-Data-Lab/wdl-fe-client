@@ -1,14 +1,32 @@
 declare namespace Schema {
   type Id = string;
 
+  type RealmStatus = import("@/shared/api/core-enums").RealmStatus;
+  type RealmVisibility = import("@/shared/api/core-enums").RealmVisibility;
+  type DatabaseType = import("@/shared/api/core-enums").DatabaseType;
+  type ColumnType = import("@/shared/api/core-enums").ColumnType;
+  type ReferentialAction = import("@/shared/api/core-enums").ReferentialAction;
+  type RelationshipCardinality = import("@/shared/api/core-enums").RelationshipCardinality;
+
+  type EnumCatalog = {
+    databaseTypes: DatabaseType[];
+    columnTypes: ColumnType[];
+    indexTypes: import("@/shared/api/core-enums").IndexType[];
+    sortOrders: import("@/shared/api/core-enums").SortOrder[];
+    referentialActions: ReferentialAction[];
+    relationshipCardinalities: RelationshipCardinality[];
+    realmStatuses: RealmStatus[];
+    realmVisibilities: RealmVisibility[];
+  };
+
   type Position = { x: number; y: number };
 
   type Realm = {
     id: Id;
     name: string;
     slug: string;
-    status: string;
-    visibility: string;
+    status: RealmStatus;
+    visibility: RealmVisibility;
     settings: Record<string, unknown>;
     notice: string | null;
     authorId: Id;
@@ -31,7 +49,7 @@ declare namespace Schema {
     id: Id;
     projectId: Id;
     name: string;
-    type: string;
+    type: DatabaseType;
     notice: string | null;
     defaultSchema: string | null;
     charset: string | null;
@@ -42,6 +60,7 @@ declare namespace Schema {
   };
 
   type Workspace = {
+    enums: EnumCatalog;
     realms: Realm[];
     projects: Project[];
     databases: Database[];
@@ -57,8 +76,8 @@ declare namespace Schema {
   type CreateRealmInput = {
     name: string;
     slug: string;
-    status?: string;
-    visibility?: string;
+    status?: RealmStatus;
+    visibility?: RealmVisibility;
     settings?: Record<string, unknown>;
     notice?: string | null;
   };
@@ -72,7 +91,7 @@ declare namespace Schema {
   type CreateDatabaseInput = {
     projectId: Id;
     name: string;
-    type?: string;
+    type?: DatabaseType;
     notice?: string | null;
     defaultSchema?: string | null;
     charset?: string | null;
@@ -95,7 +114,7 @@ declare namespace Schema {
   type CreateColumnInput = {
     tableId: Id;
     name: string;
-    type: string;
+    type: ColumnType;
     sortOrder: number;
     customType?: string | null;
     length?: number | null;
@@ -113,6 +132,8 @@ declare namespace Schema {
     notice?: string | null;
   };
 
+  type UpdateColumnInput = Omit<TableColumn, "id" | "tableId" | "authorId" | "createdAt" | "updatedAt">;
+
   type CreateRelationshipInput = {
     databaseId: Id;
     sourceTableId: Id;
@@ -120,10 +141,10 @@ declare namespace Schema {
     sourceColumnId: Id;
     targetColumnId: Id;
     name?: string | null;
-    sourceCardinality?: string;
-    targetCardinality?: string;
-    onDelete?: string;
-    onUpdate?: string;
+    sourceCardinality?: RelationshipCardinality;
+    targetCardinality?: RelationshipCardinality;
+    onDelete?: ReferentialAction;
+    onUpdate?: ReferentialAction;
     waypoints?: Position[];
   };
 
@@ -131,12 +152,22 @@ declare namespace Schema {
     id: Id;
     tableId: Id;
     name: string;
-    type: string;
+    type: ColumnType;
+    customType: string | null;
     length: number | null;
+    precision: number | null;
+    scale: number | null;
+    arrayDimensions: number;
     nullable: boolean;
     primaryKey: boolean;
     unique: boolean;
+    autoIncrement: boolean;
+    unsigned: boolean;
+    defaultValue: string | null;
+    check: string | null;
+    enumValues: string[];
     sortOrder: number;
+    notice: string | null;
     authorId: Id;
     createdAt: string;
     updatedAt: string | null;
@@ -171,10 +202,10 @@ declare namespace Schema {
     sourceTableId: Id;
     targetTableId: Id;
     columnPairs: RelationshipColumnPair[];
-    sourceCardinality: string;
-    targetCardinality: string;
-    onDelete: string;
-    onUpdate: string;
+    sourceCardinality: RelationshipCardinality;
+    targetCardinality: RelationshipCardinality;
+    onDelete: ReferentialAction;
+    onUpdate: ReferentialAction;
     waypoints: Position[];
     authorId: Id;
     createdAt: string;

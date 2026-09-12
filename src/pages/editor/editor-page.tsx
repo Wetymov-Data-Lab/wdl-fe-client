@@ -16,6 +16,145 @@ import { readCssColorToken } from "@/shared/lib/css-token";
 import { DiagramEditor } from "@/widgets/diagram/ui/diagram-editor";
 import { WorkspacePathPicker } from "@/widgets/workspace-path/ui/workspace-path-picker";
 
+const sidebarMinWidth = 360;
+const sidebarMaxWidth = 640;
+
+function optionalString(form: FormData, field: string): string | null {
+  const value = String(form.get(field) ?? "").trim();
+  return value || null;
+}
+
+function optionalNumber(form: FormData, field: string): number | null {
+  const value = optionalString(form, field);
+  return value === null ? null : Number(value);
+}
+
+function readColumnForm(form: FormData): Schema.UpdateColumnInput {
+  return {
+    name: String(form.get("columnName")).trim(),
+    type: String(form.get("columnType")) as Schema.ColumnType,
+    customType: optionalString(form, "customType"),
+    length: optionalNumber(form, "length"),
+    precision: optionalNumber(form, "precision"),
+    scale: optionalNumber(form, "scale"),
+    arrayDimensions: Number(form.get("arrayDimensions")),
+    nullable: form.has("nullable"),
+    primaryKey: form.has("primaryKey"),
+    unique: form.has("unique"),
+    autoIncrement: form.has("autoIncrement"),
+    unsigned: form.has("unsigned"),
+    defaultValue: optionalString(form, "defaultValue"),
+    check: optionalString(form, "check"),
+    enumValues: String(form.get("enumValues") ?? "")
+      .split(/[,\n]/)
+      .map((value) => value.trim())
+      .filter(Boolean),
+    sortOrder: Number(form.get("sortOrder")),
+    notice: optionalString(form, "notice"),
+  };
+}
+
+function ColumnFormFields({
+  value,
+  columnTypes,
+  defaultSortOrder,
+}: {
+  value?: Schema.TableColumn;
+  columnTypes: Schema.ColumnType[];
+  defaultSortOrder: number;
+}) {
+  return (
+    <>
+      <div className="column-form-grid">
+        <label>
+          Имя колонки
+          <input
+            name="columnName"
+            defaultValue={value?.name ?? ""}
+            placeholder="например, account_id"
+            autoComplete="off"
+            autoFocus
+            required
+          />
+        </label>
+        <label>
+          Тип
+          <select name="columnType" defaultValue={value?.type ?? "varchar"}>
+            {columnTypes.map((type) => (
+              <option value={type} key={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Пользовательский тип
+          <input name="customType" defaultValue={value?.customType ?? ""} maxLength={255} />
+        </label>
+        <label>
+          Длина
+          <input name="length" type="number" min="1" defaultValue={value?.length ?? ""} />
+        </label>
+        <label>
+          Точность
+          <input name="precision" type="number" min="1" defaultValue={value?.precision ?? ""} />
+        </label>
+        <label>
+          Масштаб
+          <input name="scale" type="number" min="0" defaultValue={value?.scale ?? ""} />
+        </label>
+        <label>
+          Размерность массива
+          <input name="arrayDimensions" type="number" min="0" max="8" defaultValue={value?.arrayDimensions ?? 0} required />
+        </label>
+        <label>
+          Порядок
+          <input name="sortOrder" type="number" min="0" defaultValue={value?.sortOrder ?? defaultSortOrder} required />
+        </label>
+      </div>
+      <fieldset className="column-form-flags">
+        <legend>Ограничения</legend>
+        <label>
+          <input name="nullable" type="checkbox" defaultChecked={value?.nullable ?? true} /> NULL
+        </label>
+        <label>
+          <input name="primaryKey" type="checkbox" defaultChecked={value?.primaryKey ?? false} /> Primary key
+        </label>
+        <label>
+          <input name="unique" type="checkbox" defaultChecked={value?.unique ?? false} /> Unique
+        </label>
+        <label>
+          <input name="autoIncrement" type="checkbox" defaultChecked={value?.autoIncrement ?? false} /> Auto increment
+        </label>
+        <label>
+          <input name="unsigned" type="checkbox" defaultChecked={value?.unsigned ?? false} /> Unsigned
+        </label>
+      </fieldset>
+      <label>
+        Значение по умолчанию
+        <input name="defaultValue" defaultValue={value?.defaultValue ?? ""} maxLength={2000} />
+      </label>
+      <label>
+        CHECK-выражение
+        <textarea name="check" defaultValue={value?.check ?? ""} maxLength={4000} rows={3} />
+      </label>
+      <label>
+        Значения enum
+        <textarea
+          name="enumValues"
+          defaultValue={value?.enumValues.join(", ") ?? ""}
+          placeholder="draft, active, archived"
+          rows={2}
+        />
+      </label>
+      <label>
+        Примечание
+        <input name="notice" defaultValue={value?.notice ?? ""} maxLength={255} />
+      </label>
+    </>
+  );
+}
+
 async function loadDiagram(databaseId: Schema.Id): Promise<Schema.Diagram> {
   const [tables, groups] = await Promise.all([table.listByDatabase(databaseId), group.listByDatabase(databaseId)]);
   const [columnGroups, relationships] = await Promise.all([
@@ -32,6 +171,7 @@ export function EditorPage() {
   const [isTableFormOpen, setTableFormOpen] = useState(false);
   const [isGroupFormOpen, setGroupFormOpen] = useState(false);
   const [columnTable, setColumnTable] = useState<Schema.DatabaseTable | null>(null);
+  const [editingColumn, setEditingColumn] = useState<Schema.TableColumn | null>(null);
   const [editingTable, setEditingTable] = useState<Schema.DatabaseTable | null>(null);
   const [tableMenu, setTableMenu] = useState<{
     table: Schema.DatabaseTable;
@@ -46,6 +186,7 @@ export function EditorPage() {
   const [tableSearch, setTableSearch] = useState("");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [connectionWarning, setConnectionWarning] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(420);
   const [browserRealmId, setBrowserRealmId] = useState<Schema.Id | null>(null);
   const [browserProjectId, setBrowserProjectId] = useState<Schema.Id | null>(null);
   const requestedDatabaseId = params.get("databaseId");
@@ -109,13 +250,7 @@ export function EditorPage() {
     },
   });
   const columnCreation = useMutation({
-    mutationFn: ({ name, type }: { name: string; type: string }) =>
-      column.create({
-        tableId: columnTable!.id,
-        name,
-        type,
-        sortOrder: diagramQuery.data?.columns.filter((columnItem) => columnItem.tableId === columnTable!.id).length ?? 0,
-      }),
+    mutationFn: column.create,
     onSuccess: (column) => {
       setColumnTable(null);
       queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
@@ -168,6 +303,21 @@ export function EditorPage() {
                     (pair) => pair.sourceColumnId === columnId || pair.targetColumnId === columnId,
                   ),
               ),
+            }
+          : diagram,
+      );
+    },
+  });
+  const columnUpdate = useMutation({
+    mutationFn: ({ columnId, input }: { columnId: Schema.Id; input: Schema.UpdateColumnInput }) =>
+      column.update(columnId, input),
+    onSuccess: (updatedColumn) => {
+      setEditingColumn(null);
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram
+          ? {
+              ...diagram,
+              columns: diagram.columns.map((item) => (item.id === updatedColumn.id ? updatedColumn : item)),
             }
           : diagram,
       );
@@ -318,8 +468,16 @@ export function EditorPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     columnCreation.mutate({
-      name: String(form.get("columnName")),
-      type: String(form.get("columnType")),
+      tableId: columnTable!.id,
+      ...readColumnForm(form),
+    });
+  };
+  const submitColumnEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    columnUpdate.mutate({
+      columnId: editingColumn!.id,
+      input: readColumnForm(form),
     });
   };
   const openColumnForm = useCallback((table: Schema.DatabaseTable) => setColumnTable(table), []);
@@ -372,11 +530,18 @@ export function EditorPage() {
     groupCreation.mutate({ name: String(form.get("groupName")), color: String(form.get("groupColor")) });
   };
   useEffect(() => {
-    const closeMenu = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setTableMenu(null);
+    const closeOverlays = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setTableFormOpen(false);
+      setGroupFormOpen(false);
+      setColumnTable(null);
+      setEditingTable(null);
+      setEditingColumn(null);
+      setTableMenu(null);
+      setColumnMenu(null);
     };
-    window.addEventListener("keydown", closeMenu);
-    return () => window.removeEventListener("keydown", closeMenu);
+    window.addEventListener("keydown", closeOverlays);
+    return () => window.removeEventListener("keydown", closeOverlays);
   }, []);
 
   if (workspaceQuery.isLoading && !requestedDatabaseId) {
@@ -466,10 +631,13 @@ export function EditorPage() {
     );
   }
 
+  const enumCatalog = workspaceQuery.data!.enums;
+
   return (
     <main
       className="workspace"
       onClick={() => {
+        if (isTableFormOpen) setTableFormOpen(false);
         setTableMenu(null);
         setColumnMenu(null);
       }}>
@@ -492,7 +660,7 @@ export function EditorPage() {
         </div>
       </header>
       <div className="workspace__body">
-        <aside className="schema-explorer">
+        <aside className="schema-explorer" style={{ width: sidebarWidth }}>
           <div className="schema-explorer__head">
             <span className="schema-explorer__label">СХЕМА</span>
             {canEdit && (
@@ -502,9 +670,11 @@ export function EditorPage() {
             )}
           </div>
           <div className="database-card">
-            <span className="database-card__engine">{activeDatabase?.type ?? "database"}</span>
-            <strong>{activeDatabase?.name ?? databaseId}</strong>
-            <small>{diagramQuery.data.tables.length} таблиц</small>
+            <div className="database-card__topline">
+              <span className="database-card__engine">{activeDatabase?.type ?? "database"}</span>
+              <small>{diagramQuery.data.tables.length} таблиц</small>
+            </div>
+            <strong title={activeDatabase?.name ?? databaseId}>{activeDatabase?.name ?? databaseId}</strong>
             {activeDatabase && (
               <small>
                 Автор:{" "}
@@ -521,40 +691,101 @@ export function EditorPage() {
               placeholder="Поиск таблиц"
             />
           </label>
-          <div className="schema-explorer__section">
-            <span>ТАБЛИЦЫ</span>
-            <b>{visibleTables.length}</b>
-          </div>
-          <div className="table-list">
-            {visibleTables.map((table) => (
-              <button
-                key={table.id}
-                className={`table-list__item ${selectedTableId === table.id ? "table-list__item--active" : ""}`}
-                type="button"
-                onClick={() => setSelectedTableId(table.id)}>
-                <i style={{ background: table.color ?? "var(--color-accent)" }} />
-                <span>{table.name}</span>
-                <small>{diagramQuery.data.columns.filter((column) => column.tableId === table.id).length}</small>
-              </button>
-            ))}
-          </div>
-          {selectedTable && (
-            <div className="table-inspector">
-              <div className="schema-explorer__section">
-                <span>ПОЛЯ: {selectedTable.name}</span>
-                <button type="button" onClick={() => openColumnForm(selectedTable)}>
-                  +
-                </button>
-              </div>
-              {selectedColumns.map((column) => (
-                <div className="field-preview" key={column.id}>
-                  <span>{column.primaryKey ? `PK ${column.name}` : column.name}</span>
-                  <small>{column.type}</small>
-                </div>
-              ))}
+          <div className="schema-explorer__content">
+            <div className="schema-explorer__section">
+              <span>ТАБЛИЦЫ</span>
+              <b>{visibleTables.length}</b>
             </div>
-          )}
+            <div className="table-list">
+              {visibleTables.map((table) => {
+                const columnsCount = diagramQuery.data.columns.filter((column) => column.tableId === table.id).length;
+                return (
+                  <button
+                    key={table.id}
+                    className={`table-list__item ${selectedTableId === table.id ? "table-list__item--active" : ""}`}
+                    type="button"
+                    title={table.name}
+                    onClick={() => setSelectedTableId(table.id)}>
+                    <i style={{ background: table.color ?? "var(--color-accent)" }} />
+                    <span>{table.name}</span>
+                    <small>{columnsCount}</small>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedTable && (
+              <div className="table-inspector">
+                <div className="table-inspector__head">
+                  <div>
+                    <span>ПОЛЯ</span>
+                    <strong title={selectedTable.name}>{selectedTable.name}</strong>
+                  </div>
+                  {canEdit && (
+                    <button type="button" title="Добавить колонку" onClick={() => openColumnForm(selectedTable)}>
+                      +
+                    </button>
+                  )}
+                </div>
+                <div className="field-preview-list">
+                  {selectedColumns.map((column) => (
+                    <div className="field-preview" key={column.id}>
+                      <div className="field-preview__main">
+                        <span title={column.name}>{column.name}</span>
+                        <small>
+                          {column.type}
+                          {column.length ? `(${column.length})` : ""}
+                          {column.arrayDimensions ? `${"[]".repeat(column.arrayDimensions)}` : ""}
+                        </small>
+                      </div>
+                      <div className="field-preview__details">
+                        {column.primaryKey && <b>PK</b>}
+                        {column.unique && <b>UQ</b>}
+                        {!column.nullable && <b>NN</b>}
+                        {column.autoIncrement && <b>AI</b>}
+                        {column.defaultValue && <span title={column.defaultValue}>default: {column.defaultValue}</span>}
+                      </div>
+                      {canEdit && (
+                        <button
+                          className="field-preview__edit"
+                          type="button"
+                          title={`Редактировать ${column.name}`}
+                          aria-label={`Редактировать колонку ${column.name}`}
+                          onClick={() => setEditingColumn(column)}>
+                          ✎
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {!selectedColumns.length && <p className="table-inspector__empty">В таблице пока нет колонок</p>}
+                </div>
+              </div>
+            )}
+          </div>
         </aside>
+        <button
+          className="schema-explorer-resizer"
+          type="button"
+          role="separator"
+          aria-label="Изменить ширину панели схемы"
+          aria-orientation="vertical"
+          aria-valuemin={sidebarMinWidth}
+          aria-valuemax={sidebarMaxWidth}
+          aria-valuenow={sidebarWidth}
+          title="Потяните, чтобы изменить ширину"
+          onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
+          onPointerMove={(event) => {
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+            setSidebarWidth(Math.min(sidebarMaxWidth, Math.max(sidebarMinWidth, event.clientX)));
+          }}
+          onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            const direction = event.key === "ArrowLeft" ? -24 : 24;
+            setSidebarWidth((width) => Math.min(sidebarMaxWidth, Math.max(sidebarMinWidth, width + direction)));
+          }}>
+          <span />
+        </button>
         <section className="workspace__canvas">
           <DiagramEditor
             diagram={diagramQuery.data}
@@ -575,7 +806,7 @@ export function EditorPage() {
         </section>
       </div>
       {isTableFormOpen && (
-        <form className="table-create-form" onSubmit={submitTable}>
+        <form className="table-create-form" onSubmit={submitTable} onClick={(event) => event.stopPropagation()}>
           <input name="tableName" placeholder="Название таблицы" autoFocus required />
           <button className="button button--primary" disabled={tableCreation.isPending}>
             {tableCreation.isPending ? "Создаем..." : "Создать"}
@@ -587,7 +818,11 @@ export function EditorPage() {
         </form>
       )}
       {isGroupFormOpen && (
-        <div className="editor-overlay">
+        <div
+          className="editor-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setGroupFormOpen(false);
+          }}>
           <form className="editor-drawer" onSubmit={submitGroup}>
             <header>
               <div>
@@ -628,8 +863,12 @@ export function EditorPage() {
         </div>
       )}
       {columnTable && (
-        <div className="editor-overlay">
-          <form className="editor-drawer" onSubmit={submitColumn}>
+        <div
+          className="editor-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setColumnTable(null);
+          }}>
+          <form className="editor-drawer editor-drawer--column" onSubmit={submitColumn}>
             <header>
               <div>
                 <span>ТАБЛИЦА</span>
@@ -640,21 +879,12 @@ export function EditorPage() {
               </button>
             </header>
             <h2>Новая колонка</h2>
-            <label>
-              Имя колонки
-              <input name="columnName" placeholder="например, account_id" autoComplete="off" autoFocus required />
-            </label>
-            <label>
-              Тип
-              <select name="columnType" defaultValue="varchar">
-                <option value="varchar">varchar</option>
-                <option value="uuid">uuid</option>
-                <option value="integer">integer</option>
-                <option value="numeric">numeric</option>
-                <option value="boolean">boolean</option>
-                <option value="timestamptz">timestamptz</option>
-              </select>
-            </label>
+            <ColumnFormFields
+              columnTypes={enumCatalog.columnTypes}
+              defaultSortOrder={
+                diagramQuery.data.columns.filter((columnItem) => columnItem.tableId === columnTable.id).length
+              }
+            />
             <footer>
               <button className="button" type="button" onClick={() => setColumnTable(null)}>
                 Отмена
@@ -668,7 +898,11 @@ export function EditorPage() {
         </div>
       )}
       {editingTable && (
-        <div className="editor-overlay">
+        <div
+          className="editor-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setEditingTable(null);
+          }}>
           <form className="editor-drawer" onSubmit={submitTableEdit}>
             <header>
               <div>
@@ -708,6 +942,40 @@ export function EditorPage() {
           </form>
         </div>
       )}
+      {editingColumn && (
+        <div
+          className="editor-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setEditingColumn(null);
+          }}>
+          <form className="editor-drawer editor-drawer--column" onSubmit={submitColumnEdit}>
+            <header>
+              <div>
+                <span>КОЛОНКА</span>
+                <strong>{editingColumn.name}</strong>
+              </div>
+              <button type="button" aria-label="Закрыть" onClick={() => setEditingColumn(null)}>
+                X
+              </button>
+            </header>
+            <h2>Редактирование колонки</h2>
+            <ColumnFormFields
+              value={editingColumn}
+              columnTypes={enumCatalog.columnTypes}
+              defaultSortOrder={editingColumn.sortOrder}
+            />
+            <footer>
+              <button className="button" type="button" onClick={() => setEditingColumn(null)}>
+                Отмена
+              </button>
+              <button className="button button--primary" disabled={columnUpdate.isPending}>
+                {columnUpdate.isPending ? "Сохраняем..." : "Сохранить"}
+              </button>
+            </footer>
+            {columnUpdate.isError && <p className="form-error">{columnUpdate.error.message}</p>}
+          </form>
+        </div>
+      )}
       {tableMenu && (
         <div className="table-context-menu" style={{ left: tableMenu.x, top: tableMenu.y }}>
           <strong>{tableMenu.table.name}</strong>
@@ -740,6 +1008,14 @@ export function EditorPage() {
       {columnMenu && (
         <div className="table-context-menu" style={{ left: columnMenu.x, top: columnMenu.y }}>
           <strong>{columnMenu.column.name}</strong>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingColumn(columnMenu.column);
+              setColumnMenu(null);
+            }}>
+            Редактировать колонку
+          </button>
           <button type="button" onClick={() => columnDeletion.mutate(columnMenu.column.id)}>
             Удалить колонку <kbd>Backspace</kbd>
           </button>

@@ -7,12 +7,19 @@ import { useAuth } from "@/features/auth/model/use-auth";
 import { ProfileLink } from "@/entities/identity/ui/profile-link";
 
 type FormState =
-  | { entity: "realm"; mode: "create"; name: string; slug: string; visibility: string }
-  | { entity: "realm"; mode: "edit"; value: Schema.Realm; name: string; slug: string; visibility: string }
+  | { entity: "realm"; mode: "create"; name: string; slug: string; visibility: Schema.RealmVisibility }
+  | {
+      entity: "realm";
+      mode: "edit";
+      value: Schema.Realm;
+      name: string;
+      slug: string;
+      visibility: Schema.RealmVisibility;
+    }
   | { entity: "project"; mode: "create"; realmId: Schema.Id; name: string }
   | { entity: "project"; mode: "edit"; value: Schema.Project; name: string }
-  | { entity: "database"; mode: "create"; projectId: Schema.Id; name: string }
-  | { entity: "database"; mode: "edit"; value: Schema.Database; name: string };
+  | { entity: "database"; mode: "create"; projectId: Schema.Id; name: string; type: Schema.DatabaseType }
+  | { entity: "database"; mode: "edit"; value: Schema.Database; name: string; type: Schema.DatabaseType };
 
 type DeleteTarget = { entity: "realm" | "project" | "database"; id: Schema.Id; name: string };
 
@@ -22,7 +29,7 @@ const formTitle = {
   database: { create: "Новая база данных", edit: "Редактировать базу данных" },
 } as const;
 
-const visibilityLabel: Record<string, string> = {
+const visibilityLabel: Record<Schema.RealmVisibility, string> = {
   private: "Приватный",
   internal: "Внутренний",
   public: "Опубликован",
@@ -57,8 +64,8 @@ export function RealmsPage() {
           : project.update(input.value, input.name);
       }
       return input.mode === "create"
-        ? database.create({ projectId: input.projectId, name: input.name })
-        : database.update(input.value, input.name);
+        ? database.create({ projectId: input.projectId, name: input.name, type: input.type })
+        : database.update(input.value, { name: input.name, type: input.type });
     },
     onSuccess: async () => {
       setForm(null);
@@ -97,10 +104,15 @@ export function RealmsPage() {
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name")).trim();
     const slug = String(data.get("slug") ?? "").trim();
-    const visibility = String(data.get("visibility") ?? "private");
+    const visibility = String(data.get("visibility") ?? "private") as Schema.RealmVisibility;
+    const type = String(data.get("databaseType") ?? "psql") as Schema.DatabaseType;
 
     if (form.entity === "realm") {
       saveMutation.mutate({ ...form, name, slug, visibility });
+      return;
+    }
+    if (form.entity === "database") {
+      saveMutation.mutate({ ...form, name, type });
       return;
     }
     saveMutation.mutate({ ...form, name });
@@ -260,6 +272,7 @@ export function RealmsPage() {
                                           mode: "edit",
                                           value: database,
                                           name: database.name,
+                                          type: database.type,
                                         })
                                       }>
                                       Редактировать
@@ -293,6 +306,7 @@ export function RealmsPage() {
                                     mode: "create",
                                     projectId: project.id,
                                     name: "",
+                                    type: workspace.enums.databaseTypes[0] ?? "psql",
                                   })
                                 }>
                                 + База данных
@@ -348,12 +362,26 @@ export function RealmsPage() {
                 <label>
                   Видимость
                   <select name="visibility" defaultValue={form.visibility}>
-                    <option value="private">Приватный — виден только вам</option>
-                    <option value="internal">Внутренний — пока виден только вам</option>
-                    <option value="public">Публичный — виден всем пользователям</option>
+                    {workspace.enums.realmVisibilities.map((visibility) => (
+                      <option value={visibility} key={visibility}>
+                        {visibilityLabel[visibility]}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </>
+            )}
+            {form.entity === "database" && (
+              <label>
+                Тип базы данных
+                <select name="databaseType" defaultValue={form.type}>
+                  {workspace.enums.databaseTypes.map((type) => (
+                    <option value={type} key={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
             {saveMutation.isError && <p className="form-error">{saveMutation.error.message}</p>}
             <footer>

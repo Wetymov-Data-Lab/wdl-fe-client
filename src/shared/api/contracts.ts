@@ -1,4 +1,16 @@
 /* eslint-disable @typescript-eslint/no-namespace -- namespaces keep service ownership visible at every type usage */
+import type {
+  AccountStatus as IdentityAccountStatus,
+  AccountSubject,
+  ColumnType,
+  CoreEnumCatalogDto,
+  DatabaseType,
+  RealmStatus,
+  RealmVisibility,
+  ReferentialAction,
+  RelationshipCardinality,
+} from "@/shared/api/core-enums";
+
 /**
  * Единственная точка описания HTTP-контрактов приложения.
  * Namespace разделяет одинаковые сущности разных сервисов, а потребитель всегда
@@ -6,6 +18,7 @@
  */
 export namespace CoreApi {
   export type Id = string;
+  export type EnumCatalog = CoreEnumCatalogDto;
 
   export type Position = {
     x: number;
@@ -22,8 +35,8 @@ export namespace CoreApi {
   export type Realm = Audit & {
     name: string;
     slug: string;
-    status: string;
-    visibility: string;
+    status: RealmStatus;
+    visibility: RealmVisibility;
     settings: Record<string, unknown>;
     notice: string | null;
     deleted_at: string | null;
@@ -33,8 +46,8 @@ export namespace CoreApi {
   export type CreateRealm = {
     name: string;
     slug: string;
-    status: string;
-    visibility: string;
+    status: RealmStatus;
+    visibility: RealmVisibility;
     settings: Record<string, unknown>;
     notice: string | null;
   };
@@ -59,7 +72,7 @@ export namespace CoreApi {
   export type Database = Audit & {
     project_id: Id;
     name: string;
-    type: string;
+    type: DatabaseType;
     notice: string | null;
     default_schema: string | null;
     charset: string | null;
@@ -88,7 +101,7 @@ export namespace CoreApi {
   export type Column = Audit & {
     table_id: Id;
     name: string;
-    type: string;
+    type: ColumnType;
     custom_type: string | null;
     length: number | null;
     precision: number | null;
@@ -107,6 +120,7 @@ export namespace CoreApi {
   };
 
   export type CreateColumn = Omit<Column, keyof Audit> & { author_id: string };
+  export type UpdateColumn = Omit<Column, keyof Audit | "table_id">;
 
   export type RelationshipColumnPair = {
     source_column_id: Id;
@@ -119,10 +133,10 @@ export namespace CoreApi {
     source_table_id: Id;
     target_table_id: Id;
     columns: RelationshipColumnPair[];
-    source_cardinality: string;
-    target_cardinality: string;
-    on_delete: string;
-    on_update: string;
+    source_cardinality: RelationshipCardinality;
+    target_cardinality: RelationshipCardinality;
+    on_delete: ReferentialAction;
+    on_update: ReferentialAction;
     waypoints: Position[];
   };
 
@@ -142,7 +156,7 @@ export namespace CoreApi {
 }
 
 export namespace IdentityApi {
-  export type AccountStatus = "pending" | "active" | "inactive" | "suspended" | "deleted";
+  export type AccountStatus = IdentityAccountStatus;
 
   export type UserInfo = {
     sub: string;
@@ -230,7 +244,7 @@ export namespace IdentityApi {
 
   export type Account = {
     id: string;
-    subject: string;
+    subject: AccountSubject;
     status: AccountStatus;
     is_2fa_enforced: boolean;
     created_at: string;

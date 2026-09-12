@@ -16,5 +16,11 @@ export const column = {
     }).then(formatter.adapters.column.fromServer);
   },
 
+  update: (columnId: Schema.Id, input: Schema.UpdateColumnInput) =>
+    request<Parameters<typeof formatter.adapters.column.fromServer>[0]>(`/columns/${columnId}`, {
+      method: "PUT",
+      body: JSON.stringify(formatter.adapters.column.toUpdateServer(input)),
+    }).then(formatter.adapters.column.fromServer),
+
   delete: (columnId: Schema.Id) => request<void>(`/columns/${columnId}`, { method: "DELETE" }),
 };

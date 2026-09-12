@@ -16,8 +16,8 @@ export const database = {
     }).then(formatter.adapters.database.fromServer);
   },
 
-  update: (value: Schema.Database, name: string) => {
-    const dto = formatter.adapters.database.toServer({ ...value, name }, getCurrentAccountId());
+  update: (value: Schema.Database, input: Pick<Schema.Database, "name" | "type">) => {
+    const dto = formatter.adapters.database.toServer({ ...value, ...input }, getCurrentAccountId());
     return request<Parameters<typeof formatter.adapters.database.fromServer>[0]>(`/databases/${value.id}`, {
       method: "PUT",
       body: JSON.stringify(dto),

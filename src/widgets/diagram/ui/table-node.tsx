@@ -20,7 +20,6 @@ export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
         data.onContextMenu?.(table, { x: event.clientX, y: event.clientY });
       }}>
       <header className="table-node__header">
-        <span className="table-node__schema">{table.schemaName ?? "public"}</span>
         <strong>{table.name}</strong>
         <span className="table-node__count">{columns.length}</span>
       </header>

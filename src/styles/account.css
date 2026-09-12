@@ -131,8 +131,7 @@
   color: var(--color-warning);
   background: var(--color-warning-soft);
 }
-.status-pill--inactive,
-.status-pill--deleted {
+.status-pill--deactivated {
   border-color: var(--color-control-line);
   color: var(--color-muted);
   background: var(--color-surface-muted);
