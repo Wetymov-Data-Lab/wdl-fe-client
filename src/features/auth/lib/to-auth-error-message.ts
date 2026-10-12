@@ -10,7 +10,7 @@ export function toAuthErrorMessage(error: unknown): string {
     const knownErrors = {
       401: "Неверная почта или пароль.",
       403: "Аккаунт ещё не активирован или доступ ограничен.",
-      409: "Аккаунт с такой почтой уже существует.",
+      409: "Аккаунт уже существует.",
     } satisfies Partial<Record<number, string>>;
 
     return knownErrors[error.status as keyof typeof knownErrors] ?? error.message;
