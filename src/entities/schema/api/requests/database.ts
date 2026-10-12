@@ -1,8 +1,13 @@
 import { formatter } from "@/entities/schema/api/schema.formatter";
-import { request } from "@/shared/api/http";
+import { request, requestResponse } from "@/shared/api/http";
 import { getCurrentAccountId } from "@/shared/auth/token-storage";
 
 export const database = {
+  exportSql: async (databaseId: Schema.Id) => {
+    const response = await requestResponse(`/databases/${databaseId}/export/sql`);
+    return response.blob();
+  },
+
   list: () =>
     request<Array<Parameters<typeof formatter.adapters.database.fromServer>[0]>>("/databases/").then((dtos) =>
       dtos.map(formatter.adapters.database.fromServer),

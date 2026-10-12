@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 // TODO: посмотреть варианты ненативного fetch
-export async function request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
+export async function requestResponse(path: string, init?: RequestInit, retry = true): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), requestTimeoutMs);
   const accessToken = isAuthEnabled ? getAccessToken() : null;
@@ -34,12 +34,17 @@ export async function request<T>(path: string, init?: RequestInit, retry = true)
   if (!response.ok) {
     if (response.status === 401 && isAuthEnabled && retry && getAccessToken()) {
       await refreshIdentityTokens();
-      return request<T>(path, init, false);
+      return requestResponse(path, init, false);
     }
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
     throw new ApiError(response.status, body?.detail ?? `Request failed with ${response.status}`);
   }
 
+  return response;
+}
+
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await requestResponse(path, init);
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
