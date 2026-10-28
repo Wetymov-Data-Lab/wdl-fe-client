@@ -1,0 +1,115 @@
+.command-palette-overlay {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: start center;
+  padding: 12vh 16px 16px;
+  background: var(--color-overlay);
+}
+.command-palette {
+  display: flex;
+  width: 100%;
+  max-width: 600px;
+  max-height: 70vh;
+  flex-direction: column;
+  border: 1px solid var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-large);
+}
+.command-palette__input {
+  display: flex;
+  height: 56px;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow-bar);
+}
+.command-palette__prompt {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.command-palette__input input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: var(--color-transparent);
+  font-size: 17px;
+}
+.command-palette__input input::placeholder {
+  color: var(--color-muted);
+}
+.command-palette__results {
+  overflow: auto;
+  padding-bottom: 6px;
+}
+.command-palette__group {
+  padding: 10px 16px 4px;
+  color: var(--color-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.command-palette__item {
+  display: grid;
+  min-height: 40px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+.command-palette__item--active {
+  background: var(--color-surface-accent);
+  box-shadow: var(--shadow-bar);
+}
+.command-palette__kind {
+  color: var(--color-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+.command-palette__item--active .command-palette__kind {
+  color: var(--accent);
+}
+.command-palette__label {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.command-palette__label b {
+  color: var(--color-accent-strong);
+}
+.command-palette__hint {
+  color: var(--color-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.command-palette__empty {
+  margin: 0;
+  padding: 20px 16px;
+  color: var(--color-muted);
+}
+.command-palette__footer {
+  display: flex;
+  flex: none;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--color-muted);
+  background: var(--color-surface-muted);
+  font-size: 12px;
+}
+.command-palette__footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

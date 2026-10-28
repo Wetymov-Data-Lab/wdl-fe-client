@@ -14,7 +14,9 @@ import {
 } from "@/pages/editor/model/editor-selection-storage";
 import { readCssColorToken } from "@/shared/lib/css-token";
 import { ErrorNotification } from "@/shared/ui/error-notification";
-import { DiagramEditor } from "@/widgets/diagram/ui/diagram-editor";
+import { DiagramEditor, type TableFocusRequest } from "@/widgets/diagram/ui/diagram-editor";
+import { CommandPalette, type CommandPaletteItem } from "@/widgets/command-palette/ui/command-palette";
+import { SearchIcon } from "@/shared/ui/icons";
 import { WorkspacePathPicker } from "@/widgets/workspace-path/ui/workspace-path-picker";
 
 const sidebarMinWidth = 360;
@@ -187,6 +189,8 @@ export function EditorPage() {
   const [tableSearch, setTableSearch] = useState("");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [connectionWarning, setConnectionWarning] = useState<string | null>(null);
+  const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [tableFocusRequest, setTableFocusRequest] = useState<TableFocusRequest | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(420);
   const [browserRealmId, setBrowserRealmId] = useState<Schema.Id | null>(null);
   const [browserProjectId, setBrowserProjectId] = useState<Schema.Id | null>(null);
@@ -575,6 +579,21 @@ export function EditorPage() {
     window.addEventListener("keydown", closeOverlays);
     return () => window.removeEventListener("keydown", closeOverlays);
   }, []);
+  useEffect(() => {
+    const toggleCommandPalette = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "k" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      setCommandPaletteOpen((isOpen) => !isOpen);
+    };
+    window.addEventListener("keydown", toggleCommandPalette);
+    return () => window.removeEventListener("keydown", toggleCommandPalette);
+  }, []);
+  const focusTable = useCallback((tableId: string) => {
+    setSelectedTableId(tableId);
+    setTableFocusRequest((request) => ({ tableId, requestId: (request?.requestId ?? 0) + 1 }));
+  }, []);
+  const openTableForm = useCallback(() => setTableFormOpen(true), []);
+  const openGroupForm = useCallback(() => setGroupFormOpen(true), []);
 
   if (workspaceQuery.isLoading && !requestedDatabaseId) {
     return (
@@ -664,6 +683,52 @@ export function EditorPage() {
   }
 
   const enumCatalog = workspaceQuery.data!.enums;
+  const diagramTables = diagramQuery.data?.tables ?? [];
+  const tableNamesById = new Map(diagramTables.map((table) => [table.id, table.name]));
+  const commandPaletteItems: CommandPaletteItem[] = [
+    ...diagramTables.map((table) => ({
+      id: `table-${table.id}`,
+      group: "Таблицы",
+      kind: "TBL",
+      label: table.name,
+      hint: table.schemaName ?? undefined,
+      onSelect: () => focusTable(table.id),
+    })),
+    ...(diagramQuery.data?.columns ?? []).map((column) => ({
+      id: `column-${column.id}`,
+      group: "Колонки",
+      kind: "COL",
+      label: `${tableNamesById.get(column.tableId) ?? "?"}.${column.name}`,
+      hint: column.type,
+      onSelect: () => focusTable(column.tableId),
+    })),
+    {
+      id: "command-create-table",
+      group: "Команды",
+      kind: "CMD",
+      label: "Создать таблицу",
+      hotkey: "T",
+      disabled: !canEdit,
+      onSelect: openTableForm,
+    },
+    {
+      id: "command-create-group",
+      group: "Команды",
+      kind: "CMD",
+      label: "Создать область",
+      hotkey: "A",
+      disabled: !canEdit,
+      onSelect: openGroupForm,
+    },
+    {
+      id: "command-export-sql",
+      group: "Команды",
+      kind: "CMD",
+      label: "Экспорт SQL",
+      disabled: sqlExport.isPending || hasPendingChanges || activeDatabase?.type !== "psql",
+      onSelect: () => sqlExport.mutate(databaseId),
+    },
+  ];
 
   return (
     <>
@@ -674,6 +739,7 @@ export function EditorPage() {
           onClose={resetSqlExport}
         />
       )}
+      {isCommandPaletteOpen && <CommandPalette items={commandPaletteItems} onClose={() => setCommandPaletteOpen(false)} />}
       <main
         className="workspace"
         onClick={() => {
@@ -684,6 +750,11 @@ export function EditorPage() {
         <header className="workspace__topbar">
           {pathPicker}
           <div className="workspace__actions">
+            <button className="workspace__search" type="button" onClick={() => setCommandPaletteOpen(true)}>
+              <SearchIcon />
+              <span>Поиск</span>
+              <kbd className="kbd">⌘K</kbd>
+            </button>
             <button
               className="button button--secondary"
               type="button"
@@ -856,6 +927,9 @@ export function EditorPage() {
                 setTableMenu(null);
                 setColumnMenu(null);
               }}
+              onAddTable={canEdit ? openTableForm : undefined}
+              onAddGroup={canEdit ? openGroupForm : undefined}
+              focusRequest={tableFocusRequest}
             />
           </section>
         </div>

@@ -6,7 +6,8 @@ import {
 } from "@/widgets/diagram/model/diagram-elements";
 import { TableNode, type TableFlowNode } from "@/widgets/diagram/ui/table-node";
 import { GroupNode } from "@/widgets/diagram/ui/group-node";
-import { useCallback, useEffect, useMemo } from "react";
+import { CanvasToolbar, type CanvasTool } from "@/widgets/diagram/ui/canvas-toolbar";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BackgroundVariant,
   ConnectionMode,
@@ -14,7 +15,7 @@ import {
   useNodesState,
   Background,
   ReactFlow,
-  Controls,
+  useReactFlow,
   type Connection,
   type OnNodeDrag,
   type NodeTypes,
@@ -36,7 +37,26 @@ type Props = {
   onGroupDelete?: (group: Schema.DiagramGroup) => void;
   onGroupResize?: (group: Schema.DiagramGroup, bounds: ResizeParams) => void;
   onCanvasClick?: () => void;
+  onAddTable?: () => void;
+  onAddGroup?: () => void;
+  focusRequest?: TableFocusRequest | null;
 };
+
+export type TableFocusRequest = {
+  tableId: string;
+  requestId: number;
+};
+
+function TableFocus({ request }: { request: TableFocusRequest }) {
+  const { fitView, setNodes } = useReactFlow<DiagramFlowNode>();
+
+  useEffect(() => {
+    setNodes((currentNodes) => currentNodes.map((node) => ({ ...node, selected: node.id === request.tableId })));
+    void fitView({ nodes: [{ id: request.tableId }], duration: 320, maxZoom: 1.2, padding: 0.6 });
+  }, [fitView, request, setNodes]);
+
+  return null;
+}
 
 export function DiagramEditor({
   diagram,
@@ -50,7 +70,11 @@ export function DiagramEditor({
   onGroupDelete,
   onGroupResize,
   onCanvasClick,
+  onAddTable,
+  onAddGroup,
+  focusRequest,
 }: Props) {
+  const [tool, setTool] = useState<CanvasTool>("pointer");
   const initialNodes = useMemo(
     () => toFlowNodes(diagram, onTableContextMenu, onColumnContextMenu, editable, onGroupDelete, onGroupResize),
     [diagram, editable, onTableContextMenu, onColumnContextMenu, onGroupDelete, onGroupResize],
@@ -176,6 +200,8 @@ export function DiagramEditor({
         isValidConnection={isValidConnection}
         connectionMode={ConnectionMode.Loose}
         onPaneClick={onCanvasClick}
+        panOnDrag={tool === "hand" ? true : [1, 2]}
+        selectionOnDrag={tool === "pointer"}
         fitView
         fitViewOptions={{ padding: 0.24 }}
         minZoom={Number(import.meta.env.DIAGRAM_MIN_ZOOM)}
@@ -186,7 +212,8 @@ export function DiagramEditor({
         connectionLineStyle={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}>
         <Background variant={BackgroundVariant.Lines} gap={20} size={2} color="var(--color-diagram-grid)" />
-        <Controls showInteractive={false} position="bottom-right" />
+        <CanvasToolbar tool={tool} onToolChange={setTool} onAddTable={onAddTable} onAddGroup={onAddGroup} />
+        {focusRequest && <TableFocus request={focusRequest} />}
       </ReactFlow>
     </section>
   );

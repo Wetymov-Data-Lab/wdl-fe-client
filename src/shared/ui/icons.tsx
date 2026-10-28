@@ -107,3 +107,68 @@ export function UserIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function PointerIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 3l6 16 2.5-6.5L20 10 5 3Z" />
+    </Icon>
+  );
+}
+
+export function HandIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12m0-1V4.5a1.5 1.5 0 0 1 3 0V12m0-.5V6a1.5 1.5 0 0 1 3 0v8c0 3.9-2.6 7-6.5 7-2.6 0-4.4-1.4-5.6-3.4l-1.5-3.8a1.5 1.5 0 0 1 2.5-1.6L8 14" />
+    </Icon>
+  );
+}
+
+export function TableIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 5h16v14H4zM4 10h16M10 10v9" />
+    </Icon>
+  );
+}
+
+export function AreaIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 4h4m4 0h4m4 0v4m0 4v4m0 4h-4m-4 0H8m-4 0v-4m0-4V8" />
+    </Icon>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  );
+}
+
+export function MinusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
+export function FitIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 9V4h5m11 5V4h-5M4 15v5h5m11-5v5h-5" />
+    </Icon>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </Icon>
+  );
+}
