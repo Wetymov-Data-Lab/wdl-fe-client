@@ -20,14 +20,18 @@ export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
         data.onContextMenu?.(table, { x: event.clientX, y: event.clientY });
       }}>
       <header className="table-node__header">
-        <strong>{table.name}</strong>
-        <span className="table-node__count">{columns.length}</span>
+        <span className="table-node__swatch" />
+        <span className="table-node__titles">
+          {table.schemaName && <span className="table-node__schema">{table.schemaName}</span>}
+          <strong>{table.name}</strong>
+        </span>
+        <span className="table-node__count">{columns.length} COL</span>
       </header>
       {!table.isCollapsed && (
         <div className="table-node__fields">
           {columns.map((column) => (
             <div
-              className="table-node__field"
+              className={`table-node__field ${column.primaryKey ? "table-node__field--pk" : ""}`}
               key={column.id}
               onContextMenu={(event) => {
                 event.preventDefault();
@@ -51,6 +55,11 @@ export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
               <span className="table-node__type">
                 {column.type}
                 {column.length ? `(${column.length})` : ""}
+                {column.nullable && (
+                  <span className="table-node__nullable" title="Nullable">
+                    ?
+                  </span>
+                )}
               </span>
               <Handle
                 className="table-node__handle"

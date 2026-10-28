@@ -38,6 +38,24 @@ export default defineConfig({
         attrs: { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
         append: true,
       },
+      {
+        tag: "link",
+        attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        append: true,
+      },
+      {
+        tag: "link",
+        attrs: { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        append: true,
+      },
+      {
+        tag: "link",
+        attrs: {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Onest:wght@400;500;600;700&display=swap",
+        },
+        append: true,
+      },
     ],
   },
   source: {

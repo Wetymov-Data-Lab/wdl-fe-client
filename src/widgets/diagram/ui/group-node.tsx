@@ -11,7 +11,7 @@ export type GroupFlowNode = Node<
 >;
 
 export function GroupNode({ data, selected }: NodeProps<GroupFlowNode>) {
-  const color = data.group.color ?? "#7C8CF8";
+  const color = data.group.color ?? "var(--color-table-cobalt)";
 
   return (
     <div
