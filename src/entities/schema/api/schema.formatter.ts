@@ -120,6 +120,7 @@ export const formatter = {
         width: dto.width,
         isCollapsed: dto.is_collapsed,
         sortOrder: dto.sort_order,
+        checks: dto.checks,
         authorId: dto.author_id,
         createdAt: dto.created_at,
         updatedAt: dto.updated_at,
@@ -139,6 +140,7 @@ export const formatter = {
             width: value.width,
             is_collapsed: value.isCollapsed,
             sort_order: value.sortOrder,
+            checks: value.checks,
           };
         }
 
@@ -156,6 +158,7 @@ export const formatter = {
           width: value.width ?? null,
           is_collapsed: value.isCollapsed ?? false,
           sort_order: value.sortOrder,
+          checks: [],
           author_id: authorId,
         };
       },
@@ -226,6 +229,38 @@ export const formatter = {
         notice: value.notice,
       }),
     },
+    index: {
+      fromServer: (dto: CoreApi.Index): Schema.TableIndex => ({
+        id: dto.id,
+        tableId: dto.table_id,
+        name: dto.name,
+        type: dto.type,
+        columns: [...dto.columns]
+          .sort((left, right) => left.position - right.position)
+          .map((column) => ({ columnId: column.column_id, sortOrder: column.sort_order })),
+        method: dto.method,
+        where: dto.where,
+        authorId: dto.author_id,
+        createdAt: dto.created_at,
+        updatedAt: dto.updated_at,
+      }),
+      toUpdateServer: (value: Schema.IndexInput): CoreApi.UpdateIndex => ({
+        name: value.name,
+        type: value.type,
+        columns: value.columns.map((column, position) => ({
+          column_id: column.columnId,
+          sort_order: column.sortOrder,
+          position,
+        })),
+        method: value.method,
+        where: value.where,
+      }),
+      toServer: (tableId: Schema.Id, value: Schema.IndexInput, authorId: string): CoreApi.CreateIndex => ({
+        table_id: tableId,
+        ...formatter.adapters.index.toUpdateServer(value),
+        author_id: authorId,
+      }),
+    },
     relationship: {
       fromServer: (dto: CoreApi.Relationship): Schema.Relationship => ({
         id: dto.id,
@@ -264,6 +299,18 @@ export const formatter = {
         waypoints: value.waypoints ?? [],
         author_id: authorId,
       }),
+      toUpdateServer: (value: Schema.Relationship, input: Schema.UpdateRelationshipInput): CoreApi.UpdateRelationship => ({
+        name: input.name,
+        columns: value.columnPairs.map((pair) => ({
+          source_column_id: pair.sourceColumnId,
+          target_column_id: pair.targetColumnId,
+        })),
+        source_cardinality: input.sourceCardinality,
+        target_cardinality: input.targetCardinality,
+        on_delete: input.onDelete,
+        on_update: input.onUpdate,
+        waypoints: value.waypoints,
+      }),
     },
     group: {
       fromServer: (dto: CoreApi.DiagramGroup): Schema.DiagramGroup => ({
@@ -289,6 +336,12 @@ export const formatter = {
         table_ids: value.tableIds,
       }),
     },
+    history: {
+      fromServer: (dto: CoreApi.DiagramHistory): Schema.DiagramHistory => ({
+        undoAction: dto.undo_action,
+        redoAction: dto.redo_action,
+      }),
+    },
     workspace: {
       fromServer: (
         enums: Schema.EnumCatalog,
@@ -312,6 +365,7 @@ export const formatter = {
         databaseId,
         tables: tables.map(formatter.adapters.table.fromServer),
         columns: columns.map(formatter.adapters.column.fromServer),
+        indexes: [],
         relationships: relationships.map(formatter.adapters.relationship.fromServer),
         groups: [],
       }),

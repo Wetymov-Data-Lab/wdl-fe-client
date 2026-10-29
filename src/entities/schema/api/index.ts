@@ -4,6 +4,8 @@ export { project } from "@/entities/schema/api/requests/project";
 export { column } from "@/entities/schema/api/requests/column";
 export { realm } from "@/entities/schema/api/requests/realm";
 export { table } from "@/entities/schema/api/requests/table";
+export { tableIndex } from "@/entities/schema/api/requests/table-index";
 export { group } from "@/entities/schema/api/requests/group";
+export { history } from "@/entities/schema/api/requests/history";
 export { schemaEnums } from "@/entities/schema/api/requests/enums";
 export { loadWorkspace } from "@/entities/schema/api/requests/workspace";

@@ -7,12 +7,14 @@ declare namespace Schema {
   type ColumnType = import("@/shared/api/core-enums").ColumnType;
   type ReferentialAction = import("@/shared/api/core-enums").ReferentialAction;
   type RelationshipCardinality = import("@/shared/api/core-enums").RelationshipCardinality;
+  type IndexType = import("@/shared/api/core-enums").IndexType;
+  type SortOrder = import("@/shared/api/core-enums").SortOrder;
 
   type EnumCatalog = {
     databaseTypes: DatabaseType[];
     columnTypes: ColumnType[];
-    indexTypes: import("@/shared/api/core-enums").IndexType[];
-    sortOrders: import("@/shared/api/core-enums").SortOrder[];
+    indexTypes: IndexType[];
+    sortOrders: SortOrder[];
     referentialActions: ReferentialAction[];
     relationshipCardinalities: RelationshipCardinality[];
     realmStatuses: RealmStatus[];
@@ -148,6 +150,14 @@ declare namespace Schema {
     waypoints?: Position[];
   };
 
+  type UpdateRelationshipInput = {
+    name: string | null;
+    sourceCardinality: RelationshipCardinality;
+    targetCardinality: RelationshipCardinality;
+    onDelete: ReferentialAction;
+    onUpdate: ReferentialAction;
+  };
+
   type TableColumn = {
     id: Id;
     tableId: Id;
@@ -173,6 +183,11 @@ declare namespace Schema {
     updatedAt: string | null;
   };
 
+  type TableCheck = {
+    name: string | null;
+    expression: string;
+  };
+
   type DatabaseTable = {
     id: Id;
     databaseId: Id;
@@ -185,9 +200,36 @@ declare namespace Schema {
     width: number | null;
     isCollapsed: boolean;
     sortOrder: number;
+    checks: TableCheck[];
     authorId: Id;
     createdAt: string;
     updatedAt: string | null;
+  };
+
+  type IndexColumn = {
+    columnId: Id;
+    sortOrder: SortOrder;
+  };
+
+  type TableIndex = {
+    id: Id;
+    tableId: Id;
+    name: string | null;
+    type: IndexType;
+    columns: IndexColumn[];
+    method: string | null;
+    where: string | null;
+    authorId: Id;
+    createdAt: string;
+    updatedAt: string | null;
+  };
+
+  type IndexInput = {
+    name: string | null;
+    type: IndexType;
+    columns: IndexColumn[];
+    method: string | null;
+    where: string | null;
   };
 
   type RelationshipColumnPair = {
@@ -224,12 +266,18 @@ declare namespace Schema {
     tableIds: Id[];
   };
 
+  type DiagramHistory = {
+    undoAction: string | null;
+    redoAction: string | null;
+  };
+
   type CreateDiagramGroupInput = Omit<DiagramGroup, "id">;
 
   type Diagram = {
     databaseId: Id;
     tables: DatabaseTable[];
     columns: TableColumn[];
+    indexes: TableIndex[];
     relationships: Relationship[];
     groups: DiagramGroup[];
   };

@@ -5,10 +5,12 @@ import type {
   ColumnType,
   CoreEnumCatalogDto,
   DatabaseType,
+  IndexType,
   RealmStatus,
   RealmVisibility,
   ReferentialAction,
   RelationshipCardinality,
+  SortOrder,
 } from "@/shared/api/core-enums";
 
 /**
@@ -82,6 +84,11 @@ export namespace CoreApi {
   export type CreateDatabase = Omit<Database, keyof Audit> & { author_id: string };
   export type UpdateDatabase = Omit<CreateDatabase, "project_id" | "author_id">;
 
+  export type TableCheck = {
+    name: string | null;
+    expression: string;
+  };
+
   export type Table = Audit & {
     database_id: Id;
     name: string;
@@ -93,6 +100,7 @@ export namespace CoreApi {
     width: number | null;
     is_collapsed: boolean;
     sort_order: number;
+    checks: TableCheck[];
   };
 
   export type CreateTable = Omit<Table, keyof Audit> & { author_id: string };
@@ -122,6 +130,24 @@ export namespace CoreApi {
   export type CreateColumn = Omit<Column, keyof Audit> & { author_id: string };
   export type UpdateColumn = Omit<Column, keyof Audit | "table_id">;
 
+  export type IndexColumn = {
+    column_id: Id;
+    sort_order: SortOrder;
+    position: number;
+  };
+
+  export type Index = Audit & {
+    table_id: Id;
+    name: string | null;
+    type: IndexType;
+    columns: IndexColumn[];
+    method: string | null;
+    where: string | null;
+  };
+
+  export type CreateIndex = Omit<Index, keyof Audit> & { author_id: string };
+  export type UpdateIndex = Omit<Index, keyof Audit | "table_id">;
+
   export type RelationshipColumnPair = {
     source_column_id: Id;
     target_column_id: Id;
@@ -141,6 +167,15 @@ export namespace CoreApi {
   };
 
   export type CreateRelationship = Omit<Relationship, keyof Audit> & { author_id: string };
+  export type UpdateRelationship = Omit<
+    CreateRelationship,
+    "database_id" | "source_table_id" | "target_table_id" | "author_id"
+  >;
+
+  export type DiagramHistory = {
+    undo_action: string | null;
+    redo_action: string | null;
+  };
 
   export type DiagramGroup = {
     id: Id;

@@ -16,5 +16,11 @@ export const relationship = {
     }).then(formatter.adapters.relationship.fromServer);
   },
 
+  update: (value: Schema.Relationship, input: Schema.UpdateRelationshipInput) =>
+    request<Parameters<typeof formatter.adapters.relationship.fromServer>[0]>(`/relationships/${value.id}`, {
+      method: "PUT",
+      body: JSON.stringify(formatter.adapters.relationship.toUpdateServer(value, input)),
+    }).then(formatter.adapters.relationship.fromServer),
+
   delete: (relationshipId: Schema.Id) => request<void>(`/relationships/${relationshipId}`, { method: "DELETE" }),
 };

@@ -171,6 +171,25 @@
   stroke-linecap: round;
   animation: diagram-data-flow 0.85s linear infinite;
 }
+.cardinality-markers {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.cardinality-marker {
+  fill: none;
+  stroke: var(--color-diagram-edge);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.cardinality-marker circle {
+  fill: var(--color-surface);
+}
+.cardinality-marker--selected {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
 @keyframes diagram-data-flow {
   to {
     stroke-dashoffset: -14;
@@ -613,6 +632,30 @@
 .table-node__field--pk .table-node__field-name {
   font-weight: 700;
 }
+.table-node__field--linked,
+.table-node__field--linked:hover {
+  background: var(--color-accent-soft);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.table-node__field--linked .table-node__field-name {
+  color: var(--color-accent-strong);
+  font-weight: 700;
+}
+.table-node__link-badge {
+  margin-left: 6px;
+  padding: 1px 4px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: var(--color-surface);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+.table-node__field--linked .table-node__handle {
+  opacity: 1;
+  transform: scale(1.15);
+}
 .table-node__type {
   margin-left: 12px;
   color: var(--color-muted);
@@ -983,6 +1026,67 @@
   margin-top: auto;
   padding-top: 17px;
   border-top: 1px solid var(--line);
+}
+
+.constraint-columns {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+.constraint-columns legend {
+  padding: 0 6px;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 680;
+}
+.constraint-columns__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px repeat(3, 34px);
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.constraint-columns__row > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.constraint-check {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 6px;
+}
+.constraint-check textarea {
+  grid-column: 1;
+}
+.constraint-columns__row button,
+.constraint-check button {
+  display: grid;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--color-surface);
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.constraint-columns__row button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.constraint-columns__pair {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.editor-drawer .constraint-columns__row select {
+  min-height: 34px;
 }
 
 @media (max-width: 560px) {

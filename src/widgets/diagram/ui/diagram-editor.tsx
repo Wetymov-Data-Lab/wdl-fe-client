@@ -1,13 +1,17 @@
 import {
   getShortestHandleSides,
   type DiagramFlowNode,
+  type RelationshipEdgeData,
   toFlowEdges,
   toFlowNodes,
 } from "@/widgets/diagram/model/diagram-elements";
-import { TableNode, type TableFlowNode } from "@/widgets/diagram/ui/table-node";
+import { TableNode } from "@/widgets/diagram/ui/table-node";
 import { GroupNode } from "@/widgets/diagram/ui/group-node";
 import { CanvasToolbar, type CanvasTool } from "@/widgets/diagram/ui/canvas-toolbar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { cardinalityMarkerId } from "@/widgets/diagram/model/cardinality-markers";
+import { CardinalityMarkers } from "@/widgets/diagram/ui/cardinality-markers";
+import { LinkedColumnsContext, getLinkedColumns } from "@/widgets/diagram/model/linked-columns";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   BackgroundVariant,
   ConnectionMode,
@@ -33,6 +37,7 @@ type Props = {
   onColumnContextMenu?: (column: Schema.TableColumn, position: { x: number; y: number }) => void;
   onRelationshipCreate?: (connection: Connection) => void;
   onRelationshipDelete?: (relationshipId: string) => void;
+  onRelationshipEdit?: (relationshipId: string) => void;
   onGroupMove?: (group: Schema.DiagramGroup, position: Schema.Position) => void;
   onGroupDelete?: (group: Schema.DiagramGroup) => void;
   onGroupResize?: (group: Schema.DiagramGroup, bounds: ResizeParams) => void;
@@ -66,6 +71,7 @@ export function DiagramEditor({
   onColumnContextMenu,
   onRelationshipCreate,
   onRelationshipDelete,
+  onRelationshipEdit,
   onGroupMove,
   onGroupDelete,
   onGroupResize,
@@ -93,14 +99,44 @@ export function DiagramEditor({
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
+  const selectedRelationshipKey = edges
+    .filter((edge) => edge.selected)
+    .map((edge) => (edge.data as { relationshipId?: string } | undefined)?.relationshipId ?? "")
+    .join(",");
+  const linkedColumns = useMemo(
+    () => getLinkedColumns(diagram.relationships, new Set(selectedRelationshipKey.split(",").filter(Boolean))),
+    [diagram.relationships, selectedRelationshipKey],
+  );
+
+  // Маркеры зависят от выделения, поэтому вычисляются при отрисовке, а не хранятся в состоянии рёбер.
+  const renderedEdges = useMemo(
+    () =>
+      edges.map((edge) => {
+        const data = edge.data as RelationshipEdgeData | undefined;
+        if (!data) return edge;
+        return {
+          ...edge,
+          markerStart: cardinalityMarkerId(data.sourceCardinality, edge.selected),
+          markerEnd: cardinalityMarkerId(data.targetCardinality, edge.selected),
+        };
+      }),
+    [edges],
+  );
+
   const updateRelationshipSides = useCallback(
-    (movedNode: TableFlowNode) => {
+    (movedNodes: DiagramFlowNode[]) => {
       const nodesById = new Map(nodes.map((node) => [node.id, node]));
-      nodesById.set(movedNode.id, movedNode);
+      const movedIds = new Set<string>();
+      for (const movedNode of movedNodes) {
+        if (movedNode.type !== "databaseTable") continue;
+        nodesById.set(movedNode.id, movedNode);
+        movedIds.add(movedNode.id);
+      }
+      if (!movedIds.size) return;
 
       setEdges((currentEdges) =>
         currentEdges.map((edge) => {
-          if (edge.source !== movedNode.id && edge.target !== movedNode.id) return edge;
+          if (!movedIds.has(edge.source) && !movedIds.has(edge.target)) return edge;
 
           const sourceNode = nodesById.get(edge.source);
           const targetNode = nodesById.get(edge.target);
@@ -132,15 +168,22 @@ export function DiagramEditor({
     [nodes, setEdges],
   );
 
-  const onNodeDragStop = useCallback<OnNodeDrag<DiagramFlowNode>>(
-    (_, node) => {
-      if (node.type === "diagramGroup") {
-        onGroupMove?.(node.data.group, node.position);
-      } else {
-        onTableMove?.(node.id, node.position);
+  const saveMovedNodes = useCallback(
+    (movedNodes: DiagramFlowNode[]) => {
+      for (const node of movedNodes) {
+        if (node.type === "diagramGroup") {
+          onGroupMove?.(node.data.group, node.position);
+        } else {
+          onTableMove?.(node.id, node.position);
+        }
       }
     },
     [onGroupMove, onTableMove],
+  );
+  // React Flow передаёт третьим аргументом все перемещаемые узлы, а не только тот, за который тянули.
+  const onNodeDragStop = useCallback<OnNodeDrag<DiagramFlowNode>>(
+    (_, node, movedNodes) => saveMovedNodes(movedNodes.length ? movedNodes : [node]),
+    [saveMovedNodes],
   );
   const onEdgesDelete = useCallback(
     (deletedEdges: Edge[]) => {
@@ -152,6 +195,15 @@ export function DiagramEditor({
       });
     },
     [onRelationshipDelete],
+  );
+  const onEdgeEdit = useCallback(
+    (event: ReactMouseEvent, edge: Edge) => {
+      const relationshipId = (edge.data as { relationshipId?: string } | undefined)?.relationshipId;
+      if (!relationshipId || !onRelationshipEdit) return;
+      event.preventDefault();
+      onRelationshipEdit(relationshipId);
+    },
+    [onRelationshipEdit],
   );
   const isValidConnection = useCallback(
     (connection: Connection | Edge) => {
@@ -182,39 +234,44 @@ export function DiagramEditor({
 
   return (
     <section className="diagram-editor" aria-label="Диаграмма базы данных">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={{ databaseTable: TableNode, diagramGroup: GroupNode } as NodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onEdgesDelete={onEdgesDelete}
-        deleteKeyCode={editable ? ["Backspace", "Delete"] : null}
-        nodesDraggable={editable}
-        nodesConnectable={editable}
-        onNodeDragStop={onNodeDragStop}
-        onNodeDrag={(_, node) => {
-          if (node.type === "databaseTable") updateRelationshipSides(node);
-        }}
-        onConnect={editable ? onConnect : undefined}
-        isValidConnection={isValidConnection}
-        connectionMode={ConnectionMode.Loose}
-        onPaneClick={onCanvasClick}
-        panOnDrag={tool === "hand" ? true : [1, 2]}
-        selectionOnDrag={tool === "pointer"}
-        fitView
-        fitViewOptions={{ padding: 0.24 }}
-        minZoom={Number(import.meta.env.DIAGRAM_MIN_ZOOM)}
-        maxZoom={Number(import.meta.env.DIAGRAM_MAX_ZOOM)}
-        snapToGrid={import.meta.env.DIAGRAM_SNAP_TO_GRID === "true"}
-        snapGrid={[Number(import.meta.env.DIAGRAM_GRID_SIZE), Number(import.meta.env.DIAGRAM_GRID_SIZE)]}
-        defaultEdgeOptions={{ type: "smoothstep" }}
-        connectionLineStyle={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-        proOptions={{ hideAttribution: true }}>
-        <Background variant={BackgroundVariant.Lines} gap={20} size={2} color="var(--color-diagram-grid)" />
-        <CanvasToolbar tool={tool} onToolChange={setTool} onAddTable={onAddTable} onAddGroup={onAddGroup} />
-        {focusRequest && <TableFocus request={focusRequest} />}
-      </ReactFlow>
+      <CardinalityMarkers />
+      <LinkedColumnsContext.Provider value={linkedColumns}>
+        <ReactFlow
+          nodes={nodes}
+          edges={renderedEdges}
+          nodeTypes={{ databaseTable: TableNode, diagramGroup: GroupNode } as NodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onEdgesDelete={onEdgesDelete}
+          onEdgeDoubleClick={onEdgeEdit}
+          onEdgeContextMenu={onEdgeEdit}
+          deleteKeyCode={editable ? ["Backspace", "Delete"] : null}
+          nodesDraggable={editable}
+          nodesConnectable={editable}
+          onNodeDragStop={onNodeDragStop}
+          onSelectionDragStop={(_, movedNodes) => saveMovedNodes(movedNodes)}
+          onNodeDrag={(_, node, movedNodes) => updateRelationshipSides(movedNodes.length ? movedNodes : [node])}
+          onSelectionDrag={(_, movedNodes) => updateRelationshipSides(movedNodes)}
+          onConnect={editable ? onConnect : undefined}
+          isValidConnection={isValidConnection}
+          connectionMode={ConnectionMode.Loose}
+          onPaneClick={onCanvasClick}
+          panOnDrag={tool === "hand" ? true : [1, 2]}
+          selectionOnDrag={tool === "pointer"}
+          fitView
+          fitViewOptions={{ padding: 0.24 }}
+          minZoom={Number(import.meta.env.DIAGRAM_MIN_ZOOM)}
+          maxZoom={Number(import.meta.env.DIAGRAM_MAX_ZOOM)}
+          snapToGrid={import.meta.env.DIAGRAM_SNAP_TO_GRID === "true"}
+          snapGrid={[Number(import.meta.env.DIAGRAM_GRID_SIZE), Number(import.meta.env.DIAGRAM_GRID_SIZE)]}
+          defaultEdgeOptions={{ type: "smoothstep" }}
+          connectionLineStyle={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
+          proOptions={{ hideAttribution: true }}>
+          <Background variant={BackgroundVariant.Lines} gap={20} size={2} color="var(--color-diagram-grid)" />
+          <CanvasToolbar tool={tool} onToolChange={setTool} onAddTable={onAddTable} onAddGroup={onAddGroup} />
+          {focusRequest && <TableFocus request={focusRequest} />}
+        </ReactFlow>
+      </LinkedColumnsContext.Provider>
     </section>
   );
 }

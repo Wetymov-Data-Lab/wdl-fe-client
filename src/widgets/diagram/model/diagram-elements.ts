@@ -16,6 +16,12 @@ export type RelationshipHandleSides = {
 
 export type DiagramFlowNode = TableFlowNode | GroupFlowNode;
 
+export type RelationshipEdgeData = {
+  relationshipId: Schema.Id;
+  sourceCardinality: Schema.RelationshipCardinality;
+  targetCardinality: Schema.RelationshipCardinality;
+};
+
 export function getShortestHandleSides(
   source: HorizontalTableBounds,
   target: HorizontalTableBounds,
@@ -86,7 +92,11 @@ export function toFlowEdges(diagram: Schema.Diagram, showLabels: boolean): Edge[
         labelStyle: { fill: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 600 },
         labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.92 },
         style: { stroke: "var(--color-diagram-edge)", strokeWidth: 1.5 },
-        data: { relationshipId: relationship.id },
+        data: {
+          relationshipId: relationship.id,
+          sourceCardinality: relationship.sourceCardinality,
+          targetCardinality: relationship.targetCardinality,
+        } satisfies RelationshipEdgeData,
       } satisfies Edge;
     }),
   );

@@ -1,4 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { useContext } from "react";
+import { LinkedColumnsContext } from "@/widgets/diagram/model/linked-columns";
 
 export type TableNodeData = {
   table: Schema.DatabaseTable;
@@ -10,6 +12,7 @@ export type TableFlowNode = Node<TableNodeData, "databaseTable">;
 
 export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
   const { table, columns } = data;
+  const linkedColumns = useContext(LinkedColumnsContext);
 
   return (
     <article
@@ -29,46 +32,58 @@ export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
       </header>
       {!table.isCollapsed && (
         <div className="table-node__fields">
-          {columns.map((column) => (
-            <div
-              className={`table-node__field ${column.primaryKey ? "table-node__field--pk" : ""}`}
-              key={column.id}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                data.onColumnContextMenu?.(column, { x: event.clientX, y: event.clientY });
-              }}>
-              <Handle
-                className="table-node__handle"
-                type="source"
-                position={Position.Left}
-                id={`handle-left-${column.id}`}
-              />
-              <span className="table-node__field-name">
-                {column.primaryKey && (
-                  <span className="key-icon" title="Primary key">
-                    PK
-                  </span>
-                )}
-                {column.name}
-              </span>
-              <span className="table-node__type">
-                {column.type}
-                {column.length ? `(${column.length})` : ""}
-                {column.nullable && (
-                  <span className="table-node__nullable" title="Nullable">
-                    ?
-                  </span>
-                )}
-              </span>
-              <Handle
-                className="table-node__handle"
-                type="source"
-                position={Position.Right}
-                id={`handle-right-${column.id}`}
-              />
-            </div>
-          ))}
+          {columns.map((column) => {
+            const linkRole = linkedColumns.get(column.id);
+            return (
+              <div
+                className={`table-node__field ${column.primaryKey ? "table-node__field--pk" : ""} ${linkRole ? "table-node__field--linked" : ""}`}
+                key={column.id}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  data.onColumnContextMenu?.(column, { x: event.clientX, y: event.clientY });
+                }}>
+                <Handle
+                  className="table-node__handle"
+                  type="source"
+                  position={Position.Left}
+                  id={`handle-left-${column.id}`}
+                />
+                <span className="table-node__field-name">
+                  {column.primaryKey && (
+                    <span className="key-icon" title="Primary key">
+                      PK
+                    </span>
+                  )}
+                  {column.name}
+                  {linkRole && (
+                    <span
+                      className="table-node__link-badge"
+                      title={
+                        linkRole === "source" ? "Внешний ключ выделенной связи" : "Колонка, на которую ссылается связь"
+                      }>
+                      {linkRole === "source" ? "FK" : "REF"}
+                    </span>
+                  )}
+                </span>
+                <span className="table-node__type">
+                  {column.type}
+                  {column.length ? `(${column.length})` : ""}
+                  {column.nullable && (
+                    <span className="table-node__nullable" title="Nullable">
+                      ?
+                    </span>
+                  )}
+                </span>
+                <Handle
+                  className="table-node__handle"
+                  type="source"
+                  position={Position.Right}
+                  id={`handle-right-${column.id}`}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </article>

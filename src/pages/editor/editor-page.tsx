@@ -1,8 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Connection, ResizeParams } from "@xyflow/react";
-import { column, database, group, loadWorkspace, project, realm, relationship, table } from "@/entities/schema/api";
+import {
+  column,
+  database,
+  group,
+  history,
+  loadWorkspace,
+  project,
+  realm,
+  relationship,
+  table,
+  tableIndex,
+} from "@/entities/schema/api";
+import { formatHistoryAction } from "@/entities/schema/model/history-actions";
 import { getColumnIdFromHandle, relationshipExists } from "@/entities/schema/model/relationship-rules";
 import { schemaQueryKeys } from "@/entities/schema/model/query-keys";
 import { useAuth } from "@/features/auth/model/use-auth";
@@ -12,7 +24,17 @@ import {
   readLastSelectedDatabaseId,
   writeLastSelectedDatabaseId,
 } from "@/pages/editor/model/editor-selection-storage";
+import {
+  formatCardinality,
+  formatIndexType,
+  formatReferentialAction,
+  readIndexForm,
+  readRelationshipForm,
+  readTableChecks,
+} from "@/pages/editor/model/constraint-form";
+import { IndexFormFields, TableChecksFields } from "@/pages/editor/ui/constraint-form-fields";
 import { readCssColorToken } from "@/shared/lib/css-token";
+import { isTypingTarget } from "@/shared/lib/is-typing-target";
 import { ErrorNotification } from "@/shared/ui/error-notification";
 import { DiagramEditor, type TableFocusRequest } from "@/widgets/diagram/ui/diagram-editor";
 import { CommandPalette, type CommandPaletteItem } from "@/widgets/command-palette/ui/command-palette";
@@ -160,11 +182,12 @@ function ColumnFormFields({
 
 async function loadDiagram(databaseId: Schema.Id): Promise<Schema.Diagram> {
   const [tables, groups] = await Promise.all([table.listByDatabase(databaseId), group.listByDatabase(databaseId)]);
-  const [columnGroups, relationships] = await Promise.all([
+  const [columnGroups, indexGroups, relationships] = await Promise.all([
     Promise.all(tables.map((tableItem) => column.listByTable(tableItem.id))),
+    Promise.all(tables.map((tableItem) => tableIndex.listByTable(tableItem.id))),
     relationship.listByDatabase(databaseId),
   ]);
-  return { databaseId, tables, columns: columnGroups.flat(), relationships, groups };
+  return { databaseId, tables, columns: columnGroups.flat(), indexes: indexGroups.flat(), relationships, groups };
 }
 
 export function EditorPage() {
@@ -176,6 +199,8 @@ export function EditorPage() {
   const [columnTable, setColumnTable] = useState<Schema.DatabaseTable | null>(null);
   const [editingColumn, setEditingColumn] = useState<Schema.TableColumn | null>(null);
   const [editingTable, setEditingTable] = useState<Schema.DatabaseTable | null>(null);
+  const [editingRelationshipId, setEditingRelationshipId] = useState<Schema.Id | null>(null);
+  const [indexForm, setIndexForm] = useState<{ table: Schema.DatabaseTable; index?: Schema.TableIndex } | null>(null);
   const [tableMenu, setTableMenu] = useState<{
     table: Schema.DatabaseTable;
     x: number;
@@ -212,12 +237,34 @@ export function EditorPage() {
     queryFn: () => loadDiagram(databaseId!),
     enabled: Boolean(databaseId),
   });
+  const historyQuery = useQuery({
+    queryKey: schemaQueryKeys.history(databaseId),
+    queryFn: () => history.get(databaseId!),
+    enabled: Boolean(databaseId),
+  });
+  const historyStep = useMutation({
+    mutationFn: (direction: "undo" | "redo") =>
+      direction === "undo" ? history.undo(databaseId!) : history.redo(databaseId!),
+    onSuccess: async (state) => {
+      queryClient.setQueryData(schemaQueryKeys.history(databaseId), state);
+      await queryClient.invalidateQueries({ queryKey: schemaQueryKeys.diagram(databaseId) });
+    },
+  });
   const moveTable = useMutation<Schema.DatabaseTable | undefined, Error, { tableId: string; position: Schema.Position }>({
     mutationFn: ({ tableId, position }) => {
       const databaseTable = diagramQuery.data?.tables.find((item) => item.id === tableId);
       if (!databaseTable) return Promise.resolve<Schema.DatabaseTable | undefined>(undefined);
       return table.update(databaseTable, position);
     },
+    // Сразу кладём позицию в кэш: иначе ответ по одной таблице перерисует канвас
+    // и вернёт остальные перемещённые таблицы на старые места до их собственных ответов.
+    onMutate: ({ tableId, position }) =>
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram
+          ? { ...diagram, tables: diagram.tables.map((item) => (item.id === tableId ? { ...item, position } : item)) }
+          : diagram,
+      ),
+    onError: () => queryClient.invalidateQueries({ queryKey: schemaQueryKeys.diagram(databaseId) }),
     onSuccess: (updatedTable) => {
       if (!updatedTable) return;
       queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
@@ -281,8 +328,8 @@ export function EditorPage() {
     },
   });
   const tableUpdate = useMutation({
-    mutationFn: ({ name, color }: { name: string; color: string }) =>
-      table.update({ ...editingTable!, name, color }, editingTable!.position),
+    mutationFn: ({ name, color, checks }: { name: string; color: string; checks: Schema.TableCheck[] }) =>
+      table.update({ ...editingTable!, name, color, checks }, editingTable!.position),
     onSuccess: (table) => {
       setEditingTable(null);
       queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
@@ -319,6 +366,10 @@ export function EditorPage() {
           ? {
               ...diagram,
               columns: diagram.columns.filter((column) => column.id !== columnId),
+              indexes: diagram.indexes.map((index) => ({
+                ...index,
+                columns: index.columns.filter((member) => member.columnId !== columnId),
+              })),
               relationships: diagram.relationships.filter(
                 (relationship) =>
                   !relationship.columnPairs.some(
@@ -340,6 +391,47 @@ export function EditorPage() {
           ? {
               ...diagram,
               columns: diagram.columns.map((item) => (item.id === updatedColumn.id ? updatedColumn : item)),
+            }
+          : diagram,
+      );
+    },
+  });
+  const indexSave = useMutation({
+    mutationFn: ({ tableId, indexId, input }: { tableId: Schema.Id; indexId?: Schema.Id; input: Schema.IndexInput }) =>
+      indexId ? tableIndex.update(indexId, input) : tableIndex.create(tableId, input),
+    onSuccess: (savedIndex) => {
+      setIndexForm(null);
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram
+          ? {
+              ...diagram,
+              indexes: diagram.indexes.some((item) => item.id === savedIndex.id)
+                ? diagram.indexes.map((item) => (item.id === savedIndex.id ? savedIndex : item))
+                : [...diagram.indexes, savedIndex],
+            }
+          : diagram,
+      );
+    },
+  });
+  const indexDeletion = useMutation({
+    mutationFn: tableIndex.delete,
+    onSuccess: (_, indexId) =>
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram ? { ...diagram, indexes: diagram.indexes.filter((item) => item.id !== indexId) } : diagram,
+      ),
+  });
+  const relationshipUpdate = useMutation({
+    mutationFn: ({ value, input }: { value: Schema.Relationship; input: Schema.UpdateRelationshipInput }) =>
+      relationship.update(value, input),
+    onSuccess: (updatedRelationship) => {
+      setEditingRelationshipId(null);
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram
+          ? {
+              ...diagram,
+              relationships: diagram.relationships.map((item) =>
+                item.id === updatedRelationship.id ? updatedRelationship : item,
+              ),
             }
           : diagram,
       );
@@ -379,6 +471,13 @@ export function EditorPage() {
   const groupUpdate = useMutation({
     mutationFn: ({ value, changes }: { value: Schema.DiagramGroup; changes: Partial<Schema.DiagramGroup> }) =>
       group.update({ ...value, ...changes }),
+    onMutate: ({ value, changes }) =>
+      queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
+        diagram
+          ? { ...diagram, groups: diagram.groups.map((item) => (item.id === value.id ? { ...item, ...changes } : item)) }
+          : diagram,
+      ),
+    onError: () => queryClient.invalidateQueries({ queryKey: schemaQueryKeys.diagram(databaseId) }),
     onSuccess: (updatedGroup) =>
       queryClient.setQueryData<Schema.Diagram>(schemaQueryKeys.diagram(databaseId), (diagram) =>
         diagram
@@ -424,11 +523,22 @@ export function EditorPage() {
     relationshipCreation,
     columnDeletion,
     columnUpdate,
+    indexSave,
+    indexDeletion,
+    relationshipUpdate,
     relationshipDeletion,
     groupCreation,
     groupUpdate,
     groupDeletion,
   ].some((mutation) => mutation.isPending);
+  const hadPendingChanges = useRef(false);
+  useEffect(() => {
+    // Каждое сохранённое изменение может добавить шаг в историю или очистить redo.
+    if (hadPendingChanges.current && !hasPendingChanges) {
+      void queryClient.invalidateQueries({ queryKey: schemaQueryKeys.history(databaseId) });
+    }
+    hadPendingChanges.current = hasPendingChanges;
+  }, [databaseId, hasPendingChanges, queryClient]);
   const activeDatabase = workspaceQuery.data?.databases.find((database) => database.id === databaseId);
   const activeProject = workspaceQuery.data?.projects.find((project) => project.id === activeDatabase?.projectId);
   const activeRealm = workspaceQuery.data?.realms.find((realm) => realm.id === activeProject?.realmId);
@@ -439,6 +549,34 @@ export function EditorPage() {
   const selectedColumns = selectedTable
     ? (diagramQuery.data?.columns.filter((column) => column.tableId === selectedTable.id) ?? [])
     : [];
+  const selectedIndexes = selectedTable
+    ? (diagramQuery.data?.indexes.filter((index) => index.tableId === selectedTable.id) ?? [])
+    : [];
+  const columnNamesById = new Map(diagramQuery.data?.columns.map((column) => [column.id, column.name]) ?? []);
+  const isOverlayOpen =
+    isTableFormOpen ||
+    isGroupFormOpen ||
+    isCommandPaletteOpen ||
+    Boolean(columnTable || editingTable || editingColumn || indexForm || editingRelationshipId);
+  const canStepHistory = canEdit && !hasPendingChanges && !historyStep.isPending && !isOverlayOpen;
+  const undoAction = historyQuery.data?.undoAction ?? null;
+  const redoAction = historyQuery.data?.redoAction ?? null;
+  const canUndo = canStepHistory && undoAction !== null;
+  const canRedo = canStepHistory && redoAction !== null;
+  const undoTitle = undoAction ? `Отменить: ${formatHistoryAction(undoAction)}` : "Нечего отменять";
+  const redoTitle = redoAction ? `Повторить: ${formatHistoryAction(redoAction)}` : "Нечего повторять";
+  const stepHistory = historyStep.mutate;
+  const resetHistoryStep = historyStep.reset;
+  useEffect(() => {
+    const handleHistoryHotkey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "z" || !(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (isTypingTarget(event.target)) return;
+      event.preventDefault();
+      if (event.shiftKey ? canRedo : canUndo) stepHistory(event.shiftKey ? "redo" : "undo");
+    };
+    window.addEventListener("keydown", handleHistoryHotkey);
+    return () => window.removeEventListener("keydown", handleHistoryHotkey);
+  }, [canRedo, canUndo, stepHistory]);
 
   useEffect(() => {
     if (!workspaceQuery.data) return;
@@ -558,6 +696,22 @@ export function EditorPage() {
     tableUpdate.mutate({
       name: String(form.get("tableName")),
       color: String(form.get("tableColor")),
+      checks: readTableChecks(form),
+    });
+  };
+  const submitRelationship = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    relationshipUpdate.mutate({
+      value: editingRelationship!,
+      input: readRelationshipForm(new FormData(event.currentTarget)),
+    });
+  };
+  const submitIndex = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    indexSave.mutate({
+      tableId: indexForm!.table.id,
+      indexId: indexForm!.index?.id,
+      input: readIndexForm(new FormData(event.currentTarget)),
     });
   };
   const submitGroup = (event: FormEvent<HTMLFormElement>) => {
@@ -573,6 +727,8 @@ export function EditorPage() {
       setColumnTable(null);
       setEditingTable(null);
       setEditingColumn(null);
+      setIndexForm(null);
+      setEditingRelationshipId(null);
       setTableMenu(null);
       setColumnMenu(null);
     };
@@ -685,6 +841,7 @@ export function EditorPage() {
   const enumCatalog = workspaceQuery.data!.enums;
   const diagramTables = diagramQuery.data?.tables ?? [];
   const tableNamesById = new Map(diagramTables.map((table) => [table.id, table.name]));
+  const editingRelationship = diagramQuery.data.relationships.find((item) => item.id === editingRelationshipId) ?? null;
   const commandPaletteItems: CommandPaletteItem[] = [
     ...diagramTables.map((table) => ({
       id: `table-${table.id}`,
@@ -721,6 +878,22 @@ export function EditorPage() {
       onSelect: openGroupForm,
     },
     {
+      id: "command-undo",
+      group: "Команды",
+      kind: "CMD",
+      label: undoTitle,
+      disabled: !undoAction || !canEdit || hasPendingChanges || historyStep.isPending,
+      onSelect: () => stepHistory("undo"),
+    },
+    {
+      id: "command-redo",
+      group: "Команды",
+      kind: "CMD",
+      label: redoTitle,
+      disabled: !redoAction || !canEdit || hasPendingChanges || historyStep.isPending,
+      onSelect: () => stepHistory("redo"),
+    },
+    {
       id: "command-export-sql",
       group: "Команды",
       kind: "CMD",
@@ -737,6 +910,13 @@ export function EditorPage() {
           title="Не удалось экспортировать SQL"
           message={sqlExport.error.message}
           onClose={resetSqlExport}
+        />
+      )}
+      {historyStep.isError && (
+        <ErrorNotification
+          title={historyStep.variables === "redo" ? "Не удалось повторить действие" : "Не удалось отменить действие"}
+          message={historyStep.error.message}
+          onClose={resetHistoryStep}
         />
       )}
       {isCommandPaletteOpen && <CommandPalette items={commandPaletteItems} onClose={() => setCommandPaletteOpen(false)} />}
@@ -765,6 +945,24 @@ export function EditorPage() {
             </button>
             {canEdit ? (
               <>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  disabled={!canUndo}
+                  title={`${undoTitle} (Ctrl+Z)`}
+                  aria-label={undoTitle}
+                  onClick={() => stepHistory("undo")}>
+                  Отменить
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  disabled={!canRedo}
+                  title={`${redoTitle} (Ctrl+Shift+Z)`}
+                  aria-label={redoTitle}
+                  onClick={() => stepHistory("redo")}>
+                  Повторить
+                </button>
                 <button className="button button--secondary" onClick={() => setGroupFormOpen(true)}>
                   + Область
                 </button>
@@ -883,6 +1081,64 @@ export function EditorPage() {
                     ))}
                     {!selectedColumns.length && <p className="table-inspector__empty">В таблице пока нет колонок</p>}
                   </div>
+                  <div className="table-inspector__head">
+                    <div>
+                      <span>ИНДЕКСЫ И КЛЮЧИ</span>
+                    </div>
+                    {canEdit && (
+                      <button type="button" title="Добавить индекс" onClick={() => setIndexForm({ table: selectedTable })}>
+                        +
+                      </button>
+                    )}
+                  </div>
+                  <div className="field-preview-list">
+                    {selectedIndexes.map((index) => (
+                      <div className="field-preview" key={index.id}>
+                        <div className="field-preview__main">
+                          <span title={index.name ?? undefined}>{index.name ?? "без имени"}</span>
+                          <small>{index.method ?? ""}</small>
+                        </div>
+                        <div className="field-preview__details">
+                          <b>{formatIndexType(index.type)}</b>
+                          <span
+                            title={index.columns.map((member) => columnNamesById.get(member.columnId) ?? "?").join(", ")}>
+                            (
+                            {index.columns
+                              .map(
+                                (member) =>
+                                  `${columnNamesById.get(member.columnId) ?? "?"}${member.sortOrder === "desc" ? " DESC" : ""}`,
+                              )
+                              .join(", ")}
+                            ){index.where ? ` WHERE ${index.where}` : ""}
+                          </span>
+                        </div>
+                        {canEdit && (
+                          <button
+                            className="field-preview__edit"
+                            type="button"
+                            title={`Редактировать ${index.name ?? "индекс"}`}
+                            aria-label={`Редактировать индекс ${index.name ?? ""}`}
+                            onClick={() => setIndexForm({ table: selectedTable, index })}>
+                            ✎
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {selectedTable.checks.map((check, position) => (
+                      <div className="field-preview" key={`check-${position}`}>
+                        <div className="field-preview__main">
+                          <span title={check.name ?? undefined}>{check.name ?? "без имени"}</span>
+                        </div>
+                        <div className="field-preview__details">
+                          <b>CHECK</b>
+                          <span title={check.expression}>{check.expression}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {!selectedIndexes.length && !selectedTable.checks.length && (
+                      <p className="table-inspector__empty">Индексов и ограничений пока нет</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -920,6 +1176,7 @@ export function EditorPage() {
               onColumnContextMenu={canEdit ? openColumnMenu : undefined}
               onRelationshipCreate={canEdit ? createRelationshipFromConnection : undefined}
               onRelationshipDelete={canEdit ? (relationshipId) => relationshipDeletion.mutate(relationshipId) : undefined}
+              onRelationshipEdit={canEdit ? setEditingRelationshipId : undefined}
               onGroupMove={canEdit ? moveGroup : undefined}
               onGroupResize={canEdit ? resizeGroup : undefined}
               onGroupDelete={canEdit ? deleteGroup : undefined}
@@ -1058,6 +1315,7 @@ export function EditorPage() {
                   <small>Используйте цвет, чтобы обозначить назначение таблицы на схеме.</small>
                 </span>
               </label>
+              <TableChecksFields value={editingTable.checks} />
               <footer>
                 <button className="button" type="button" onClick={() => setEditingTable(null)}>
                   Отмена
@@ -1067,6 +1325,162 @@ export function EditorPage() {
                 </button>
               </footer>
               {tableUpdate.isError && <p className="form-error">{tableUpdate.error.message}</p>}
+            </form>
+          </div>
+        )}
+        {indexForm && (
+          <div
+            className="editor-overlay"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIndexForm(null);
+            }}>
+            <form className="editor-drawer editor-drawer--column" onSubmit={submitIndex}>
+              <header>
+                <div>
+                  <span>ТАБЛИЦА</span>
+                  <strong>{indexForm.table.name}</strong>
+                </div>
+                <button type="button" aria-label="Закрыть" onClick={() => setIndexForm(null)}>
+                  X
+                </button>
+              </header>
+              <h2>{indexForm.index ? "Редактирование индекса" : "Новый индекс"}</h2>
+              <IndexFormFields
+                value={indexForm.index}
+                tableColumns={diagramQuery.data.columns
+                  .filter((columnItem) => columnItem.tableId === indexForm.table.id)
+                  .sort((left, right) => left.sortOrder - right.sortOrder)}
+                indexTypes={enumCatalog.indexTypes}
+                sortOrders={enumCatalog.sortOrders}
+              />
+              <footer>
+                {indexForm.index && (
+                  <button
+                    className="button"
+                    type="button"
+                    disabled={indexDeletion.isPending}
+                    onClick={() => indexDeletion.mutate(indexForm.index!.id, { onSuccess: () => setIndexForm(null) })}>
+                    {indexDeletion.isPending ? "Удаляем..." : "Удалить"}
+                  </button>
+                )}
+                <button className="button" type="button" onClick={() => setIndexForm(null)}>
+                  Отмена
+                </button>
+                <button className="button button--primary" disabled={indexSave.isPending}>
+                  {indexSave.isPending ? "Сохраняем..." : "Сохранить"}
+                </button>
+              </footer>
+              {indexSave.isError && <p className="form-error">{indexSave.error.message}</p>}
+              {indexDeletion.isError && <p className="form-error">{indexDeletion.error.message}</p>}
+            </form>
+          </div>
+        )}
+        {editingRelationship && (
+          <div
+            className="editor-overlay"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setEditingRelationshipId(null);
+            }}>
+            <form className="editor-drawer" onSubmit={submitRelationship}>
+              <header>
+                <div>
+                  <span>СВЯЗЬ</span>
+                  <strong>
+                    {tableNamesById.get(editingRelationship.sourceTableId) ?? "?"} →{" "}
+                    {tableNamesById.get(editingRelationship.targetTableId) ?? "?"}
+                  </strong>
+                </div>
+                <button type="button" aria-label="Закрыть" onClick={() => setEditingRelationshipId(null)}>
+                  X
+                </button>
+              </header>
+              <h2>Редактирование связи</h2>
+              <label>
+                Название
+                <input
+                  name="relationshipName"
+                  defaultValue={editingRelationship.name ?? ""}
+                  placeholder="авто"
+                  maxLength={255}
+                  autoComplete="off"
+                  autoFocus
+                />
+              </label>
+              <fieldset className="constraint-columns">
+                <legend>Колонки</legend>
+                {editingRelationship.columnPairs.map((pair) => (
+                  <div className="constraint-columns__pair" key={`${pair.sourceColumnId}-${pair.targetColumnId}`}>
+                    {tableNamesById.get(editingRelationship.sourceTableId)}.
+                    {columnNamesById.get(pair.sourceColumnId) ?? "?"}
+                    {" → "}
+                    {tableNamesById.get(editingRelationship.targetTableId)}.
+                    {columnNamesById.get(pair.targetColumnId) ?? "?"}
+                  </div>
+                ))}
+              </fieldset>
+              <div className="column-form-grid">
+                <label>
+                  Кардинальность источника
+                  <select name="sourceCardinality" defaultValue={editingRelationship.sourceCardinality}>
+                    {enumCatalog.relationshipCardinalities.map((value) => (
+                      <option value={value} key={value}>
+                        {formatCardinality(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Кардинальность цели
+                  <select name="targetCardinality" defaultValue={editingRelationship.targetCardinality}>
+                    {enumCatalog.relationshipCardinalities.map((value) => (
+                      <option value={value} key={value}>
+                        {formatCardinality(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  ON DELETE
+                  <select name="onDelete" defaultValue={editingRelationship.onDelete}>
+                    {enumCatalog.referentialActions.map((value) => (
+                      <option value={value} key={value}>
+                        {formatReferentialAction(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  ON UPDATE
+                  <select name="onUpdate" defaultValue={editingRelationship.onUpdate}>
+                    {enumCatalog.referentialActions.map((value) => (
+                      <option value={value} key={value}>
+                        {formatReferentialAction(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <footer>
+                <button
+                  className="button"
+                  type="button"
+                  disabled={relationshipDeletion.isPending}
+                  onClick={() =>
+                    relationshipDeletion.mutate(editingRelationship.id, {
+                      onSuccess: () => setEditingRelationshipId(null),
+                    })
+                  }>
+                  {relationshipDeletion.isPending ? "Удаляем..." : "Удалить"}
+                </button>
+                <button className="button" type="button" onClick={() => setEditingRelationshipId(null)}>
+                  Отмена
+                </button>
+                <button className="button button--primary" disabled={relationshipUpdate.isPending}>
+                  {relationshipUpdate.isPending ? "Сохраняем..." : "Сохранить"}
+                </button>
+              </footer>
+              {relationshipUpdate.isError && <p className="form-error">{relationshipUpdate.error.message}</p>}
+              {relationshipDeletion.isError && <p className="form-error">{relationshipDeletion.error.message}</p>}
             </form>
           </div>
         )}
@@ -1122,6 +1536,14 @@ export function EditorPage() {
                 setTableMenu(null);
               }}>
               Редактировать таблицу
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIndexForm({ table: tableMenu.table });
+                setTableMenu(null);
+              }}>
+              Добавить индекс
             </button>
             <button
               type="button"
