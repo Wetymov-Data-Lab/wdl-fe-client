@@ -26,7 +26,7 @@ export function AppHeader() {
           </NavLink>
         ))}
       </nav>
-      <NavLink className="account-trigger" to={auth.user ? "/account" : "/login"}>
+      <NavLink className="account-trigger" to={auth.user ? "/account/overview" : "/login"}>
         <span className="account-trigger__status" aria-hidden="true" />
         <span className="account-trigger__copy">
           <small>{auth.user ? "ACCOUNT" : "LOCAL"}</small>

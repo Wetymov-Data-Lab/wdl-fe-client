@@ -3,6 +3,14 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AppProviders } from "@/app/providers";
 import { useAuth } from "@/features/auth/model/use-auth";
 import { AccountPage } from "@/pages/account/account-page";
+import { OverviewRoute } from "@/pages/account/routes/overview-route";
+import { DangerRoute, InvitationsRoute, TokensRoute } from "@/pages/account/routes/placeholder-routes";
+import { PreferencesRoute } from "@/pages/account/routes/preferences-route";
+import { ProfileRoute } from "@/pages/account/routes/profile-route";
+import { RealmsRoute } from "@/pages/account/routes/realms-route";
+import { SecurityRoute } from "@/pages/account/routes/security-route";
+import { SessionsRoute } from "@/pages/account/routes/sessions-route";
+import { SignInRoute } from "@/pages/account/routes/sign-in-route";
 import { AuthPage } from "@/pages/auth/auth-page";
 import { CatalogPage } from "@/pages/catalog/catalog-page";
 import { DashboardPage } from "@/pages/dashboard/dashboard-page";
@@ -40,7 +48,20 @@ function Shell() {
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/editor" element={<EditorPage />} />
           <Route path="/realms" element={<RealmsPage />} />
-          <Route path="/account" element={<AccountPage />} />
+          <Route path="/account" element={<AccountPage />}>
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<OverviewRoute />} />
+            <Route path="profile" element={<ProfileRoute />} />
+            <Route path="sign-in" element={<SignInRoute />} />
+            <Route path="security" element={<SecurityRoute />} />
+            <Route path="sessions" element={<SessionsRoute />} />
+            <Route path="realms" element={<RealmsRoute />} />
+            <Route path="invitations" element={<InvitationsRoute />} />
+            <Route path="preferences" element={<PreferencesRoute />} />
+            <Route path="tokens" element={<TokensRoute />} />
+            <Route path="danger" element={<DangerRoute />} />
+            <Route path="*" element={<Navigate to="overview" replace />} />
+          </Route>
           <Route path="/profiles/:accountId" element={<ProfilePage />} />
           <Route path="/projects" element={<Navigate to="/realms" replace />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
