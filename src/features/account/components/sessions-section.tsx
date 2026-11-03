@@ -9,6 +9,7 @@ type SessionsSectionProps = {
   renderedAt: number;
   hasError: boolean;
   onDelete: (sessionId: string) => void;
+  eyebrow?: string;
 };
 
 export function SessionsSection({
@@ -18,10 +19,11 @@ export function SessionsSection({
   renderedAt,
   hasError,
   onDelete,
+  eyebrow,
 }: SessionsSectionProps) {
   return (
-    <section className="account-section" id="sessions">
-      <AccountSectionHeader title="Активные сессии" description="Устройства, на которых выполнен вход." />
+    <section className="account-section">
+      <AccountSectionHeader eyebrow={eyebrow} title="Активные сессии" description="Устройства, на которых выполнен вход." />
       {hasError && (
         <div className="session-error">Не удалось завершить сессию. Обновите страницу и попробуйте ещё раз.</div>
       )}

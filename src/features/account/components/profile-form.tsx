@@ -8,6 +8,8 @@ type ProfileFormProps = {
   saved: boolean;
   error: string | null;
   onSubmit: (profile: IdentityApi.UpdateProfile) => void;
+  onDraftChange?: (profile: IdentityApi.UpdateProfile) => void;
+  eyebrow?: string;
 };
 
 type ProfileField = Exclude<keyof IdentityApi.UpdateProfile, "bio" | "picture_url">;
@@ -35,28 +37,36 @@ function optionalValue(form: FormData, name: ProfileField | "bio"): string | nul
   return value || null;
 }
 
-export function ProfileForm({ profile, pending, saved, error, onSubmit }: ProfileFormProps) {
+function readProfile(form: FormData, pictureUrl: string | null): IdentityApi.UpdateProfile {
+  return {
+    display_name: String(form.get("display_name") ?? "").trim(),
+    given_name: optionalValue(form, "given_name"),
+    family_name: optionalValue(form, "family_name"),
+    bio: optionalValue(form, "bio"),
+    job_title: optionalValue(form, "job_title"),
+    organization: optionalValue(form, "organization"),
+    locale: optionalValue(form, "locale"),
+    time_zone: optionalValue(form, "time_zone"),
+    picture_url: pictureUrl,
+    website_url: optionalValue(form, "website_url"),
+  };
+}
+
+export function ProfileForm({ profile, pending, saved, error, onSubmit, onDraftChange, eyebrow }: ProfileFormProps) {
+  const pictureUrl = profile?.picture_url ?? null;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    onSubmit({
-      display_name: String(form.get("display_name") ?? "").trim(),
-      given_name: optionalValue(form, "given_name"),
-      family_name: optionalValue(form, "family_name"),
-      bio: optionalValue(form, "bio"),
-      job_title: optionalValue(form, "job_title"),
-      organization: optionalValue(form, "organization"),
-      locale: optionalValue(form, "locale"),
-      time_zone: optionalValue(form, "time_zone"),
-      picture_url: profile?.picture_url ?? null,
-      website_url: optionalValue(form, "website_url"),
-    });
+    onSubmit(readProfile(new FormData(event.currentTarget), pictureUrl));
   };
 
   return (
-    <section className="account-section" id="profile">
-      <AccountSectionHeader title="Профиль" description="Эти данные видны другим пользователям WDL." />
-      <form className="profile-form" key={profile?.updated_at ?? profile?.created_at ?? "new"} onSubmit={submit}>
+    <section className="account-section">
+      <AccountSectionHeader eyebrow={eyebrow} title="Профиль" description="Эти данные видны другим пользователям WDL." />
+      <form
+        className="profile-form"
+        key={profile?.updated_at ?? profile?.created_at ?? "new"}
+        onSubmit={submit}
+        onChange={(event) => onDraftChange?.(readProfile(new FormData(event.currentTarget), pictureUrl))}>
         <div className="profile-form__grid">
           {fields.map((field) => (
             <label className={field.name.endsWith("_url") ? "profile-form__wide" : undefined} key={field.name}>

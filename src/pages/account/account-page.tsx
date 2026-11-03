@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Outlet } from "react-router-dom";
 import { identityApi } from "@/entities/identity/api/identity-api";
 import { AccountHeader } from "@/features/account/components/account-header";
 import { AccountNavigation } from "@/features/account/components/account-navigation";
-import { AccountOverview } from "@/features/account/components/account-overview";
-import { IdentifiersSection } from "@/features/account/components/identifiers-section";
-import { SessionsSection } from "@/features/account/components/sessions-section";
-import { ProfileForm } from "@/features/account/components/profile-form";
+import { getSecuritySteps } from "@/entities/identity/lib/security";
+import type { AccountOutletContext } from "@/pages/account/model/account-outlet-context";
 import { useAuth } from "@/features/auth/model/use-auth";
 import { getCurrentSessionId } from "@/shared/auth/token-storage";
 import type { IdentityApi } from "@/shared/api/contracts";
@@ -87,6 +86,10 @@ export function AccountPage() {
     preferencesMutation.reset();
     deleteIdentifierMutation.reset();
   };
+  const securitySteps = useMemo(
+    () => (accountQuery.data ? getSecuritySteps(accountQuery.data, renderedAt) : []),
+    [accountQuery.data, renderedAt],
+  );
 
   if (accountQuery.isLoading) {
     return (
@@ -114,49 +117,56 @@ export function AccountPage() {
     if (right.id === currentSessionId) return 1;
     return Date.parse(right.last_refreshed_at) - Date.parse(left.last_refreshed_at);
   });
+  const outletContext: AccountOutletContext = {
+    account,
+    sessions,
+    currentSessionId,
+    renderedAt,
+    securitySteps,
+    profile: {
+      pending: profileMutation.isPending,
+      saved: profileMutation.isSuccess,
+      error: profileMutation.error ? profileErrorMessage(profileMutation.error) : null,
+      submit: profileMutation.mutate,
+    },
+    identifiers: {
+      adding: addIdentifierMutation.isPending,
+      pendingIdentifierId: preferencesMutation.isPending
+        ? preferencesMutation.variables.identifierId
+        : deleteIdentifierMutation.isPending
+          ? deleteIdentifierMutation.variables
+          : undefined,
+      error: identifierError ? identifierErrorMessage(identifierError) : null,
+      add: (input) => addIdentifierMutation.mutate(input),
+      updatePreferences: (identifier, input) => preferencesMutation.mutate({ identifierId: identifier.id, input }),
+      remove: (identifier) => {
+        if (window.confirm(`Удалить идентификатор «${identifier.value}»?`)) {
+          deleteIdentifierMutation.mutate(identifier.id);
+        }
+      },
+      dismissError: dismissIdentifierError,
+    },
+    sessionActions: {
+      pendingSessionId: sessionMutation.isPending ? sessionMutation.variables : undefined,
+      hasError: sessionMutation.isError,
+      remove: sessionMutation.mutate,
+    },
+  };
 
   return (
     <main className="account-page">
-      <AccountHeader account={account} email={auth.user?.email ?? null} onLogout={auth.logout} />
-      <div className="account-layout">
-        <AccountNavigation identifiersCount={account.identifiers.length} sessionsCount={account.sessions.length} />
-        <div className="account-sections">
-          <ProfileForm
-            profile={account.profile}
-            pending={profileMutation.isPending}
-            saved={profileMutation.isSuccess}
-            error={profileMutation.error ? profileErrorMessage(profileMutation.error) : null}
-            onSubmit={profileMutation.mutate}
-          />
-          <AccountOverview account={account} />
-          <IdentifiersSection
-            identifiers={account.identifiers}
-            adding={addIdentifierMutation.isPending}
-            pendingIdentifierId={
-              preferencesMutation.isPending
-                ? preferencesMutation.variables.identifierId
-                : deleteIdentifierMutation.isPending
-                  ? deleteIdentifierMutation.variables
-                  : undefined
-            }
-            error={identifierError ? identifierErrorMessage(identifierError) : null}
-            onAdd={(input) => addIdentifierMutation.mutate(input)}
-            onUpdatePreferences={(identifier, input) => preferencesMutation.mutate({ identifierId: identifier.id, input })}
-            onDelete={(identifier) => {
-              if (window.confirm(`Удалить идентификатор «${identifier.value}»?`)) {
-                deleteIdentifierMutation.mutate(identifier.id);
-              }
-            }}
-            onDismissError={dismissIdentifierError}
-          />
-          <SessionsSection
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            pendingSessionId={sessionMutation.isPending ? sessionMutation.variables : undefined}
-            renderedAt={renderedAt}
-            hasError={sessionMutation.isError}
-            onDelete={sessionMutation.mutate}
-          />
+      <div className="account-frame">
+        <AccountHeader
+          account={account}
+          email={auth.user?.email ?? null}
+          securitySteps={securitySteps}
+          onLogout={auth.logout}
+        />
+        <div className="account-layout">
+          <AccountNavigation counts={{ "sign-in": account.identifiers.length, sessions: account.sessions.length }} />
+          <div className="account-sections">
+            <Outlet context={outletContext} />
+          </div>
         </div>
       </div>
     </main>

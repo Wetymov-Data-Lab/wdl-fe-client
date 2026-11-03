@@ -13,6 +13,7 @@ type IdentifiersSectionProps = {
   onUpdatePreferences: (identifier: IdentityApi.Identifier, preferences: IdentityApi.IdentifierPreferences) => void;
   onDelete: (identifier: IdentityApi.Identifier) => void;
   onDismissError: () => void;
+  eyebrow?: string;
 };
 
 export function IdentifiersSection({
@@ -24,6 +25,7 @@ export function IdentifiersSection({
   onUpdatePreferences,
   onDelete,
   onDismissError,
+  eyebrow,
 }: IdentifiersSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const wasAdding = useRef(false);
@@ -40,8 +42,12 @@ export function IdentifiersSection({
   };
 
   return (
-    <section className="account-section" id="identifiers">
-      <AccountSectionHeader title="Идентификаторы" description="Адреса и внешние учётные записи, связанные с аккаунтом." />
+    <section className="account-section">
+      <AccountSectionHeader
+        eyebrow={eyebrow}
+        title="Входы и почта"
+        description="Адреса и внешние учётные записи, связанные с аккаунтом."
+      />
       <div className="identifier-toolbar">
         <button
           className="button button--primary"

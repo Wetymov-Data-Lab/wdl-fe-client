@@ -15,7 +15,7 @@ export function AccountOverview({ account }: AccountOverviewProps) {
   ] as const;
 
   return (
-    <section className="account-section" id="overview">
+    <section className="account-section">
       <AccountSectionHeader title="Об аккаунте" />
       <div className="detail-grid">
         <div className="detail-item detail-item--wide">
